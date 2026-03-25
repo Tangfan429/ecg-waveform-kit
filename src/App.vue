@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import MonitoringCenter from "./lib/components/monitoring/MonitoringCenter.vue";
 import WaveformCenter from "./lib/components/WaveformCenter.vue";
 import {
   demoHighFrequencyEcg,
@@ -11,43 +12,68 @@ import {
   demoVectorEcg,
 } from "./lib/demo/demoData";
 
+const surfaceMode = ref("monitoring");
 const examMode = ref("standard_ecg");
 const analysisType = ref("waveform");
+const monitoringMode = ref("monitor");
+
+const surfaceOptions = Object.freeze([
+  {
+    value: "monitoring",
+    label: "监护波形",
+    description: "ICU 监护仪与呼吸机波形，使用 mock stream 模拟实时数据。",
+  },
+  {
+    value: "diagnosis",
+    label: "诊断波形",
+    description: "现有十二导联诊断中心演示入口。",
+  },
+]);
+
+const activeSurfaceSummary = computed(
+  () =>
+    surfaceOptions.find((item) => item.value === surfaceMode.value) ||
+    surfaceOptions[0],
+);
 </script>
 
 <template>
   <div class="app-shell">
-    <section>
-      <div class="hero-panel">
-        <div class="hero-panel__eyebrow">Component Repository</div>
-        <div class="hero-panel__header">
-          <div>
-            <h1 class="hero-panel__title">ECG Waveform Kit</h1>
-            <p class="hero-panel__subtitle">
-              从诊断中心页面中抽离出的通用波形组件仓库，保留常规心电、动态心电、动态血压、波形分析、平均模板、节律波形、频谱心电、高频心电、QT离散度、心电向量、打印与工具栏能力，去除收藏病例、会诊、审核等业务动作。
-            </p>
-          </div>
-
-          <div class="hero-panel__summary">
-            <div class="hero-panel__summary-card">
-              <span class="hero-panel__summary-label">模式</span>
-              <strong class="hero-panel__summary-value">三类检查</strong>
-            </div>
-            <div class="hero-panel__summary-card">
-              <span class="hero-panel__summary-label">分析</span>
-              <strong class="hero-panel__summary-value">七类标签全内置</strong>
-            </div>
-            <div class="hero-panel__summary-card">
-              <span class="hero-panel__summary-label">输出</span>
-              <strong class="hero-panel__summary-value">打印与扩展插槽</strong>
-            </div>
-          </div>
-        </div>
+    <header class="app-shell__header">
+      <div>
+        <p class="app-shell__eyebrow">Reusable Medical Waveform Library</p>
+        <h1 class="app-shell__title">ecg-web 组件库演示台</h1>
+        <p class="app-shell__summary">
+          {{ activeSurfaceSummary.description }}
+        </p>
       </div>
-    </section>
+
+      <div class="app-shell__mode-group">
+        <button
+          v-for="item in surfaceOptions"
+          :key="item.value"
+          type="button"
+          :class="[
+            'app-shell__mode-pill',
+            {
+              'app-shell__mode-pill--active': surfaceMode === item.value,
+            },
+          ]"
+          @click="surfaceMode = item.value"
+        >
+          {{ item.label }}
+        </button>
+      </div>
+    </header>
 
     <section class="workspace-panel">
+      <MonitoringCenter
+        v-if="surfaceMode === 'monitoring'"
+        v-model:mode="monitoringMode"
+      />
+
       <WaveformCenter
+        v-else
         v-model:exam-mode="examMode"
         v-model:analysis-type="analysisType"
         :standard-waveform-data="demoStandardEcg.waveformData"
@@ -69,104 +95,91 @@ const analysisType = ref("waveform");
 .app-shell {
   min-height: 100vh;
   padding: 28px;
-}
-
-.hero-panel {
-  margin-bottom: 18px;
-  padding: 28px 30px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 248, 255, 0.92) 100%);
-  box-shadow:
-    0 24px 60px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
-
-  &__eyebrow {
-    margin-bottom: 14px;
-    color: rgba(53, 98, 236, 0.88);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
 
   &__header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 24px;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  &__eyebrow {
+    margin: 0;
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 
   &__title {
-    margin: 0 0 10px;
-    font-size: clamp(30px, 4vw, 44px);
-    line-height: 1.05;
-  }
-
-  &__subtitle {
-    margin: 0;
-    max-width: 960px;
-    color: rgba(15, 23, 42, 0.68);
-    font-size: 15px;
+    margin: 8px 0 0;
+    color: #0f172a;
+    font-size: 32px;
+    line-height: 1.02;
   }
 
   &__summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
-    gap: 12px;
-    min-width: min(100%, 380px);
+    margin: 12px 0 0;
+    max-width: 760px;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.7;
   }
 
-  &__summary-card {
-    padding: 16px 14px;
-    border-radius: 20px;
-    background: linear-gradient(180deg, rgba(238, 243, 255, 0.9) 0%, rgba(255, 255, 255, 0.96) 100%);
-    border: 1px solid rgba(53, 98, 236, 0.12);
+  &__mode-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
-  &__summary-label {
-    display: block;
-    margin-bottom: 8px;
-    color: rgba(15, 23, 42, 0.5);
-    font-size: 12px;
-  }
+  &__mode-pill {
+    padding: 11px 18px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      color 0.2s ease;
 
-  &__summary-value {
-    display: block;
-    color: rgba(15, 23, 42, 0.92);
-    font-size: 15px;
+    &:hover {
+      transform: translateY(-1px);
+      border-color: rgba(79, 124, 255, 0.3);
+      box-shadow: 0 12px 26px rgba(79, 124, 255, 0.14);
+    }
+
+    &--active {
+      border-color: transparent;
+      background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+      color: #ffffff;
+    }
   }
 }
 
 .workspace-panel {
-  min-height: calc(100vh - 214px);
-}
-
-@media (max-width: 1200px) {
-  .hero-panel {
-    &__header {
-      flex-direction: column;
-    }
-
-    &__summary {
-      width: 100%;
-      min-width: 0;
-    }
-  }
+  min-height: calc(100vh - 56px);
 }
 
 @media (max-width: 768px) {
   .app-shell {
     padding: 16px;
+
+    &__title {
+      font-size: 26px;
+    }
   }
 
-  .hero-panel {
-    padding: 20px;
-
-    &__summary {
-      grid-template-columns: 1fr;
-    }
+  .workspace-panel {
+    min-height: calc(100vh - 32px);
   }
 }
 </style>
