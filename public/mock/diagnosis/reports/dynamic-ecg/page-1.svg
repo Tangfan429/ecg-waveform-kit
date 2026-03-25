@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1360" viewBox="0 0 960 1360">
+  <rect width="960" height="1360" fill="#f4f6fb" />
+  <rect x="72" y="40" width="816" height="1280" rx="8" fill="#ffffff" stroke="#d8dce8" />
+  <text x="480" y="92" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#1f2937">Holter ECG Report</text>
+  <text x="120" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Patient: Yang L.</text>
+  <text x="420" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Start: 2025-09-04 14:33</text>
+  <text x="740" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Page 1 / 3</text>
+  <line x1="112" y1="162" x2="848" y2="162" stroke="#a0aec0" stroke-width="2" />
+  <g transform="translate(118 204)">
+    <rect width="210" height="180" fill="#fbfdff" stroke="#c7d2fe" />
+    <rect x="14" y="18" width="182" height="128" fill="none" stroke="#d9e2f2" stroke-dasharray="4 4" />
+    <path d="M18 136 C48 52 84 66 102 122 S158 172 192 88" fill="none" stroke="#111827" stroke-width="3" />
+    <text x="105" y="166" text-anchor="middle" font-size="14" font-family="Arial, sans-serif" fill="#334155">Heart Rate Trend</text>
+  </g>
+  <g transform="translate(376 204)">
+    <rect width="210" height="180" fill="#fbfdff" stroke="#c7d2fe" />
+    <rect x="14" y="18" width="182" height="128" fill="none" stroke="#d9e2f2" stroke-dasharray="4 4" />
+    <path d="M18 96 L50 84 L82 90 L114 48 L146 60 L178 34" fill="none" stroke="#2563eb" stroke-width="3" />
+    <text x="105" y="166" text-anchor="middle" font-size="14" font-family="Arial, sans-serif" fill="#334155">HRV Scatter</text>
+  </g>
+  <g transform="translate(634 204)">
+    <rect width="210" height="180" fill="#fbfdff" stroke="#c7d2fe" />
+    <rect x="14" y="18" width="182" height="128" fill="none" stroke="#d9e2f2" stroke-dasharray="4 4" />
+    <rect x="34" y="122" width="18" height="24" fill="#111827" />
+    <rect x="74" y="84" width="18" height="62" fill="#111827" />
+    <rect x="114" y="62" width="18" height="84" fill="#111827" />
+    <rect x="154" y="102" width="18" height="44" fill="#111827" />
+    <text x="105" y="166" text-anchor="middle" font-size="14" font-family="Arial, sans-serif" fill="#334155">RR Distribution</text>
+  </g>
+  <g transform="translate(118 436)">
+    <rect width="726" height="242" fill="#ffffff" stroke="#cbd5e1" />
+    <line x1="242" y1="0" x2="242" y2="242" stroke="#cbd5e1" />
+    <line x1="484" y1="0" x2="484" y2="242" stroke="#cbd5e1" />
+    <text x="121" y="32" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" fill="#334155">24h</text>
+    <text x="363" y="32" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" fill="#334155">Day</text>
+    <text x="605" y="32" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" fill="#334155">Night</text>
+    <text x="26" y="76" font-size="15" font-family="Arial, sans-serif" fill="#475569">TP: 110.57</text>
+    <text x="26" y="110" font-size="15" font-family="Arial, sans-serif" fill="#475569">ULF: 3.96</text>
+    <text x="26" y="144" font-size="15" font-family="Arial, sans-serif" fill="#475569">LF: 14.37</text>
+    <text x="26" y="178" font-size="15" font-family="Arial, sans-serif" fill="#475569">HF: 19.75</text>
+    <text x="26" y="212" font-size="15" font-family="Arial, sans-serif" fill="#475569">SDNN: 58.71</text>
+    <text x="268" y="76" font-size="15" font-family="Arial, sans-serif" fill="#475569">TP: 128.26</text>
+    <text x="268" y="110" font-size="15" font-family="Arial, sans-serif" fill="#475569">ULF: 5.02</text>
+    <text x="268" y="144" font-size="15" font-family="Arial, sans-serif" fill="#475569">LF: 15.10</text>
+    <text x="268" y="178" font-size="15" font-family="Arial, sans-serif" fill="#475569">HF: 19.60</text>
+    <text x="268" y="212" font-size="15" font-family="Arial, sans-serif" fill="#475569">SDNN: 62.78</text>
+    <text x="510" y="76" font-size="15" font-family="Arial, sans-serif" fill="#475569">TP: 91.42</text>
+    <text x="510" y="110" font-size="15" font-family="Arial, sans-serif" fill="#475569">ULF: 2.81</text>
+    <text x="510" y="144" font-size="15" font-family="Arial, sans-serif" fill="#475569">LF: 13.57</text>
+    <text x="510" y="178" font-size="15" font-family="Arial, sans-serif" fill="#475569">HF: 19.91</text>
+    <text x="510" y="212" font-size="15" font-family="Arial, sans-serif" fill="#475569">SDNN: 47.90</text>
+  </g>
+  <g transform="translate(118 724)">
+    <rect width="726" height="518" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="32" font-size="18" font-family="Arial, sans-serif" fill="#334155">Single Lead Strip</text>
+    <g stroke="#fecaca">
+      <line x1="0" y1="58" x2="726" y2="58" />
+      <line x1="0" y1="118" x2="726" y2="118" />
+      <line x1="0" y1="178" x2="726" y2="178" />
+      <line x1="0" y1="238" x2="726" y2="238" />
+      <line x1="0" y1="298" x2="726" y2="298" />
+      <line x1="0" y1="358" x2="726" y2="358" />
+      <line x1="0" y1="418" x2="726" y2="418" />
+      <line x1="0" y1="478" x2="726" y2="478" />
+      <line x1="60" y1="42" x2="60" y2="500" />
+      <line x1="120" y1="42" x2="120" y2="500" />
+      <line x1="180" y1="42" x2="180" y2="500" />
+      <line x1="240" y1="42" x2="240" y2="500" />
+      <line x1="300" y1="42" x2="300" y2="500" />
+      <line x1="360" y1="42" x2="360" y2="500" />
+      <line x1="420" y1="42" x2="420" y2="500" />
+      <line x1="480" y1="42" x2="480" y2="500" />
+      <line x1="540" y1="42" x2="540" y2="500" />
+      <line x1="600" y1="42" x2="600" y2="500" />
+      <line x1="660" y1="42" x2="660" y2="500" />
+    </g>
+    <path d="M18 286 L54 284 L62 246 L70 314 L92 282 L124 284 L132 246 L140 314 L162 282 L194 284 L202 246 L210 314 L232 282 L264 284 L272 246 L280 314 L302 282 L334 284 L342 246 L350 314 L372 282 L404 284 L412 246 L420 314 L442 282 L474 284 L482 246 L490 314 L512 282 L544 284 L552 246 L560 314 L582 282 L614 284 L622 246 L630 314 L652 282 L708 286" fill="none" stroke="#111827" stroke-width="3" />
+  </g>
+</svg>

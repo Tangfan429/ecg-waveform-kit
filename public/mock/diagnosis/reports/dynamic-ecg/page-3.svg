@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1360" viewBox="0 0 960 1360">
+  <rect width="960" height="1360" fill="#f4f6fb" />
+  <rect x="72" y="40" width="816" height="1280" rx="8" fill="#ffffff" stroke="#d8dce8" />
+  <text x="480" y="92" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#1f2937">Holter ECG Report</text>
+  <text x="120" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Patient: Yang L.</text>
+  <text x="420" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Section: Conclusion</text>
+  <text x="740" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Page 3 / 3</text>
+  <line x1="112" y1="162" x2="848" y2="162" stroke="#a0aec0" stroke-width="2" />
+  <g transform="translate(118 214)">
+    <rect width="726" height="228" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Narrative</text>
+    <text x="24" y="84" font-size="17" font-family="Arial, sans-serif" fill="#475569">1. Sinus rhythm was dominant during the 24-hour monitoring.</text>
+    <text x="24" y="126" font-size="17" font-family="Arial, sans-serif" fill="#475569">2. Occasional ventricular premature beats were recorded.</text>
+    <text x="24" y="168" font-size="17" font-family="Arial, sans-serif" fill="#475569">3. No sustained atrial fibrillation or high-grade AV block was observed.</text>
+  </g>
+  <g transform="translate(118 488)">
+    <rect width="726" height="722" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Trend Appendix</text>
+    <g transform="translate(24 72)">
+      <rect width="678" height="282" fill="#fbfdff" stroke="#c7d2fe" />
+      <path d="M28 226 L72 204 L116 212 L160 184 L204 156 L248 170 L292 124 L336 140 L380 88 L424 116 L468 70 L512 98 L556 60 L600 92 L644 54" fill="none" stroke="#2563eb" stroke-width="4" />
+      <line x1="28" y1="226" x2="644" y2="226" stroke="#cbd5e1" />
+      <text x="28" y="252" font-size="14" font-family="Arial, sans-serif" fill="#475569">00:00</text>
+      <text x="600" y="252" font-size="14" font-family="Arial, sans-serif" fill="#475569">24:00</text>
+    </g>
+    <g transform="translate(24 402)">
+      <rect width="678" height="262" fill="#fffaf0" stroke="#f3d5b5" />
+      <text x="22" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Technician Note</text>
+      <text x="22" y="86" font-size="16" font-family="Arial, sans-serif" fill="#475569">Lead quality: stable</text>
+      <text x="22" y="128" font-size="16" font-family="Arial, sans-serif" fill="#475569">Artifacts: low burden</text>
+      <text x="22" y="170" font-size="16" font-family="Arial, sans-serif" fill="#475569">Suggested follow-up: routine outpatient review</text>
+      <line x1="22" y1="212" x2="320" y2="212" stroke="#94a3b8" stroke-width="2" />
+      <text x="22" y="242" font-size="14" font-family="Arial, sans-serif" fill="#64748b">Signature</text>
+    </g>
+  </g>
+</svg>

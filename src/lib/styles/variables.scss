@@ -1,0 +1,127 @@
+// ============================================
+// 诊断中心设计规范 - 样式变量
+// 基于 Figma 设计稿: ICU、区域 - 诊断中心-波形分析
+// ============================================
+
+// ============================================
+// 品牌色系
+// ============================================
+$brand-1-light: #F2F3FF;      // Brand1-Light 浅色背景
+$brand-2-focus: #D9E1FF;      // Brand2-Focus 聚焦态
+$brand-3-disabled: #B5C7FF;   // Brand3-Disabled 禁用态
+$brand-6-hover: #6689F3;      // Brand6-Hover 悬停态
+$brand-7-normal: #3562EC;     // Brand7-Normal 主色
+$brand-8-click: #2D56D5;      // Brand8-Click 点击态
+
+// ============================================
+// 功能色系
+// ============================================
+// 成功色
+$success-1-light: #E3F9E9;
+$success-2-focus: #C6F3D7;
+$success-5-normal: #2BA471;
+
+// 警告色
+$warning-1-light: #FFF1E9;
+$warning-5-normal: #E37318;
+
+// 错误色
+$error-1-light: #FFF0ED;
+$error-2-focus: #FFD8D2;
+$error-5-hover: #F6685D;
+$error-6-normal: #D54941;
+
+// ============================================
+// 中性色系
+// ============================================
+$gray-white: #FFFFFF;
+$gray-1: #F3F3F3;
+$gray-2: #EEEEEE;
+$gray-3: #E7E7E7;             // 分割线
+$gray-4: #DCDCDC;             // 边框
+$gray-5: #C5C5C5;
+$gray-6: #666666;
+
+// ============================================
+// 文字色系
+// ============================================
+$text-primary: rgba(0, 0, 0, 0.9);      // 主要文字
+$text-secondary: rgba(0, 0, 0, 0.6);    // 次要文字
+$text-placeholder: rgba(0, 0, 0, 0.4);  // 占位文字
+$text-white: #FFFFFF;                    // 白色文字
+$text-white-85: rgba(255, 255, 255, 0.85);
+$text-white-90: rgba(255, 255, 255, 0.9);
+
+// ============================================
+// 背景色
+// ============================================
+$bg-page: #F9FAFB;            // 页面背景
+$bg-patient-info: #F2F3FF;    // 患者信息栏背景
+$bg-toolbar: linear-gradient(90deg, rgba(216, 230, 255, 1) 0%, rgba(232, 228, 255, 1) 100%);
+$bg-panel-header: linear-gradient(180deg, rgba(239, 239, 239, 1) 0%, rgba(204, 204, 204, 1) 100%);
+
+// ============================================
+// 导联键盘按钮样式
+// ============================================
+$lead-btn-bg: linear-gradient(180deg, rgba(247, 247, 247, 1) 30%, rgba(230, 230, 230, 1) 100%);
+$lead-btn-border: linear-gradient(180deg, rgba(234, 234, 234, 1) 0%, rgba(231, 231, 231, 1) 100%);
+$lead-btn-active-bg: linear-gradient(180deg, rgba(236, 240, 254, 1) 30%, rgba(195, 210, 253, 1) 100%);
+$lead-btn-active-border: linear-gradient(180deg, rgba(227, 234, 255, 1) 0%, rgba(218, 228, 255, 1) 100%);
+$lead-btn-shadow: inset 0px 2px 4px 0px rgba(255, 255, 255, 0.6), inset 2px 2px 4px 0px rgba(255, 255, 255, 0.8);
+
+// ============================================
+// 阴影
+// ============================================
+$shadow-card: 0px 2px 6px 0px rgba(0, 0, 0, 0.08);
+$shadow-dropdown: 0px 5px 5px -3px rgba(0, 0, 0, 0.1), 0px 8px 10px 1px rgba(0, 0, 0, 0.06), 0px 3px 14px 2px rgba(0, 0, 0, 0.05);
+
+// ============================================
+// 圆角
+// ============================================
+$radius-xs: 2px;
+$radius-sm: 3px;
+$radius-md: 4px;
+$radius-lg: 6px;
+$radius-xl: 8px;
+$radius-round: 50px;
+
+// ============================================
+// 字体
+// ============================================
+$font-family-base: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+// 标题字体
+$font-title-xl: 600 20px/1.4 $font-family-base;      // Title/ExtraLarge
+$font-title-md: 600 16px/1.5 $font-family-base;      // Title/Medium
+$font-title-sm: 600 14px/1.57 $font-family-base;     // Title/Small
+
+// 正文字体
+$font-body-lg: 400 16px/1.5 $font-family-base;       // Body/Large
+$font-body-md: 400 14px/1.57 $font-family-base;      // Body/Medium
+$font-body-sm: 400 12px/1.67 $font-family-base;      // Body/Small
+
+// ============================================
+// 布局尺寸
+// ============================================
+$design-width: 1920px;        // 设计稿宽度
+$design-height: 1080px;       // 设计稿高度
+
+// 区域尺寸
+$patient-info-height: 50px;   // 患者信息栏高度
+$exam-record-height: 48px;    // 检查记录栏高度
+$tabs-height: 48px;           // Tab 栏高度
+$toolbar-height: 40px;        // 工具栏高度
+$panel-width: 439px;          // 右侧面板宽度
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+
+// ============================================
+// 状态标签颜色
+// ============================================
+$tag-inpatient-bg: $success-5-normal;
+$tag-outpatient-bg: $brand-7-normal;

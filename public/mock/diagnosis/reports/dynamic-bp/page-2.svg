@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1360" viewBox="0 0 960 1360">
+  <rect width="960" height="1360" fill="#f4f6fb" />
+  <rect x="72" y="40" width="816" height="1280" rx="8" fill="#ffffff" stroke="#d8dce8" />
+  <text x="480" y="92" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#1f2937">Ambulatory BP Report</text>
+  <text x="120" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Patient: Yang K.</text>
+  <text x="420" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Section: Tables</text>
+  <text x="740" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Page 2 / 2</text>
+  <line x1="112" y1="162" x2="848" y2="162" stroke="#a0aec0" stroke-width="2" />
+  <g transform="translate(118 214)">
+    <rect width="726" height="988" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Measurement Summary</text>
+    <g transform="translate(0 76)">
+      <line x1="0" y1="0" x2="726" y2="0" stroke="#cbd5e1" />
+      <line x1="0" y1="72" x2="726" y2="72" stroke="#cbd5e1" />
+      <line x1="0" y1="144" x2="726" y2="144" stroke="#cbd5e1" />
+      <line x1="0" y1="216" x2="726" y2="216" stroke="#cbd5e1" />
+      <line x1="182" y1="0" x2="182" y2="756" stroke="#cbd5e1" />
+      <line x1="454" y1="0" x2="454" y2="756" stroke="#cbd5e1" />
+      <text x="24" y="44" font-size="16" font-family="Arial, sans-serif" fill="#475569">Validity</text>
+      <text x="212" y="44" font-size="16" font-family="Arial, sans-serif" fill="#111827">92%</text>
+      <text x="486" y="44" font-size="16" font-family="Arial, sans-serif" fill="#111827">46 / 50 records</text>
+      <text x="24" y="116" font-size="16" font-family="Arial, sans-serif" fill="#475569">SBP Max</text>
+      <text x="212" y="116" font-size="16" font-family="Arial, sans-serif" fill="#111827">168 mmHg</text>
+      <text x="486" y="116" font-size="16" font-family="Arial, sans-serif" fill="#111827">08:12</text>
+      <text x="24" y="188" font-size="16" font-family="Arial, sans-serif" fill="#475569">DBP Max</text>
+      <text x="212" y="188" font-size="16" font-family="Arial, sans-serif" fill="#111827">96 mmHg</text>
+      <text x="486" y="188" font-size="16" font-family="Arial, sans-serif" fill="#111827">08:12</text>
+      <text x="24" y="260" font-size="16" font-family="Arial, sans-serif" fill="#475569">Pulse Max</text>
+      <text x="212" y="260" font-size="16" font-family="Arial, sans-serif" fill="#111827">106 bpm</text>
+      <text x="486" y="260" font-size="16" font-family="Arial, sans-serif" fill="#111827">19:40</text>
+      <text x="24" y="332" font-size="16" font-family="Arial, sans-serif" fill="#475569">Day Load</text>
+      <text x="212" y="332" font-size="16" font-family="Arial, sans-serif" fill="#111827">34%</text>
+      <text x="486" y="332" font-size="16" font-family="Arial, sans-serif" fill="#111827">Mild elevation</text>
+      <text x="24" y="404" font-size="16" font-family="Arial, sans-serif" fill="#475569">Night Drop</text>
+      <text x="212" y="404" font-size="16" font-family="Arial, sans-serif" fill="#111827">10.6%</text>
+      <text x="486" y="404" font-size="16" font-family="Arial, sans-serif" fill="#111827">Normal dipper</text>
+      <text x="24" y="476" font-size="16" font-family="Arial, sans-serif" fill="#475569">Morning Surge</text>
+      <text x="212" y="476" font-size="16" font-family="Arial, sans-serif" fill="#111827">22 mmHg</text>
+      <text x="486" y="476" font-size="16" font-family="Arial, sans-serif" fill="#111827">Within range</text>
+      <text x="24" y="548" font-size="16" font-family="Arial, sans-serif" fill="#475569">Comment</text>
+      <text x="212" y="548" font-size="16" font-family="Arial, sans-serif" fill="#111827">Daytime BP mildly elevated, nocturnal dip preserved.</text>
+    </g>
+  </g>
+</svg>

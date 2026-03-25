@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1360" viewBox="0 0 960 1360">
+  <rect width="960" height="1360" fill="#f4f6fb" />
+  <rect x="72" y="40" width="816" height="1280" rx="8" fill="#ffffff" stroke="#d8dce8" />
+  <text x="480" y="92" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#1f2937">Ambulatory BP Report</text>
+  <text x="120" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Patient: Yang K.</text>
+  <text x="420" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Monitor No: 6850CSD</text>
+  <text x="740" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Page 1 / 2</text>
+  <line x1="112" y1="162" x2="848" y2="162" stroke="#a0aec0" stroke-width="2" />
+  <g transform="translate(118 206)">
+    <rect width="726" height="756" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Trend Chart</text>
+    <rect x="24" y="60" width="678" height="646" fill="#fbfdff" stroke="#d9e2f2" />
+    <rect x="378" y="60" width="160" height="646" fill="#bfdbfe" opacity="0.55" />
+    <g stroke="#e2e8f0">
+      <line x1="24" y1="156" x2="702" y2="156" />
+      <line x1="24" y1="252" x2="702" y2="252" />
+      <line x1="24" y1="348" x2="702" y2="348" />
+      <line x1="24" y1="444" x2="702" y2="444" />
+      <line x1="24" y1="540" x2="702" y2="540" />
+      <line x1="24" y1="636" x2="702" y2="636" />
+    </g>
+    <path d="M36 358 L84 330 L132 312 L180 430 L228 370 L276 278 L324 344 L372 260 L420 478 L468 304 L516 328 L564 318 L612 298 L660 244" fill="none" stroke="#f97316" stroke-width="4" />
+    <path d="M36 518 L84 504 L132 492 L180 564 L228 520 L276 460 L324 520 L372 474 L420 618 L468 492 L516 520 L564 508 L612 530 L660 482" fill="none" stroke="#3b82f6" stroke-width="4" />
+    <path d="M36 552 L84 544 L132 536 L180 586 L228 554 L276 512 L324 548 L372 536 L420 610 L468 542 L516 548 L564 546 L612 560 L660 534" fill="none" stroke="#ef4444" stroke-width="3" />
+  </g>
+  <g transform="translate(118 1010)">
+    <rect width="726" height="190" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="38" font-size="18" font-family="Arial, sans-serif" fill="#334155">Summary</text>
+    <text x="24" y="86" font-size="16" font-family="Arial, sans-serif" fill="#475569">24h average: 128 / 78 mmHg</text>
+    <text x="24" y="122" font-size="16" font-family="Arial, sans-serif" fill="#475569">Day average: 132 / 82 mmHg</text>
+    <text x="24" y="158" font-size="16" font-family="Arial, sans-serif" fill="#475569">Night average: 118 / 70 mmHg</text>
+  </g>
+</svg>

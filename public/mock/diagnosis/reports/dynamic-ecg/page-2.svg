@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1360" viewBox="0 0 960 1360">
+  <rect width="960" height="1360" fill="#f4f6fb" />
+  <rect x="72" y="40" width="816" height="1280" rx="8" fill="#ffffff" stroke="#d8dce8" />
+  <text x="480" y="92" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#1f2937">Holter ECG Report</text>
+  <text x="120" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Patient: Yang L.</text>
+  <text x="420" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Section: Event Summary</text>
+  <text x="740" y="134" font-size="16" font-family="Arial, sans-serif" fill="#475569">Page 2 / 3</text>
+  <line x1="112" y1="162" x2="848" y2="162" stroke="#a0aec0" stroke-width="2" />
+  <g transform="translate(118 214)">
+    <rect width="726" height="252" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Arrhythmia Summary</text>
+    <line x1="0" y1="62" x2="726" y2="62" stroke="#cbd5e1" />
+    <line x1="0" y1="118" x2="726" y2="118" stroke="#cbd5e1" />
+    <line x1="0" y1="174" x2="726" y2="174" stroke="#cbd5e1" />
+    <line x1="182" y1="0" x2="182" y2="252" stroke="#cbd5e1" />
+    <line x1="460" y1="0" x2="460" y2="252" stroke="#cbd5e1" />
+    <text x="24" y="98" font-size="16" font-family="Arial, sans-serif" fill="#475569">PVC Count</text>
+    <text x="220" y="98" font-size="16" font-family="Arial, sans-serif" fill="#111827">42</text>
+    <text x="496" y="98" font-size="16" font-family="Arial, sans-serif" fill="#111827">Max 6 / hour</text>
+    <text x="24" y="154" font-size="16" font-family="Arial, sans-serif" fill="#475569">PAC Count</text>
+    <text x="220" y="154" font-size="16" font-family="Arial, sans-serif" fill="#111827">18</text>
+    <text x="496" y="154" font-size="16" font-family="Arial, sans-serif" fill="#111827">Max 3 / hour</text>
+    <text x="24" y="210" font-size="16" font-family="Arial, sans-serif" fill="#475569">Longest Pause</text>
+    <text x="220" y="210" font-size="16" font-family="Arial, sans-serif" fill="#111827">1.8 s</text>
+    <text x="496" y="210" font-size="16" font-family="Arial, sans-serif" fill="#111827">No AF episode</text>
+  </g>
+  <g transform="translate(118 520)">
+    <rect width="726" height="692" fill="#ffffff" stroke="#cbd5e1" />
+    <text x="24" y="36" font-size="18" font-family="Arial, sans-serif" fill="#334155">Representative Strips</text>
+    <g transform="translate(18 76)">
+      <rect width="690" height="176" fill="#fffaf0" stroke="#f3d5b5" />
+      <text x="18" y="26" font-size="14" font-family="Arial, sans-serif" fill="#475569">08:14:22  72 bpm</text>
+      <g stroke="#fecaca">
+        <line x1="0" y1="64" x2="690" y2="64" />
+        <line x1="0" y1="118" x2="690" y2="118" />
+        <line x1="60" y1="0" x2="60" y2="176" />
+        <line x1="120" y1="0" x2="120" y2="176" />
+        <line x1="180" y1="0" x2="180" y2="176" />
+        <line x1="240" y1="0" x2="240" y2="176" />
+        <line x1="300" y1="0" x2="300" y2="176" />
+        <line x1="360" y1="0" x2="360" y2="176" />
+        <line x1="420" y1="0" x2="420" y2="176" />
+        <line x1="480" y1="0" x2="480" y2="176" />
+        <line x1="540" y1="0" x2="540" y2="176" />
+        <line x1="600" y1="0" x2="600" y2="176" />
+      </g>
+      <path d="M14 96 L46 96 L54 62 L62 122 L82 94 L126 96 L134 62 L142 122 L162 94 L206 96 L214 62 L222 122 L242 94 L286 96 L294 62 L302 122 L322 94 L366 96 L374 62 L382 122 L402 94 L446 96 L454 62 L462 122 L482 94 L526 96 L534 62 L542 122 L562 94 L606 96 L614 62 L622 122 L642 94 L676 96" fill="none" stroke="#111827" stroke-width="3" />
+    </g>
+    <g transform="translate(18 284)">
+      <rect width="690" height="176" fill="#fffaf0" stroke="#f3d5b5" />
+      <text x="18" y="26" font-size="14" font-family="Arial, sans-serif" fill="#475569">13:09:41  PVC cluster</text>
+      <g stroke="#fecaca">
+        <line x1="0" y1="64" x2="690" y2="64" />
+        <line x1="0" y1="118" x2="690" y2="118" />
+        <line x1="60" y1="0" x2="60" y2="176" />
+        <line x1="120" y1="0" x2="120" y2="176" />
+        <line x1="180" y1="0" x2="180" y2="176" />
+        <line x1="240" y1="0" x2="240" y2="176" />
+        <line x1="300" y1="0" x2="300" y2="176" />
+        <line x1="360" y1="0" x2="360" y2="176" />
+        <line x1="420" y1="0" x2="420" y2="176" />
+        <line x1="480" y1="0" x2="480" y2="176" />
+        <line x1="540" y1="0" x2="540" y2="176" />
+        <line x1="600" y1="0" x2="600" y2="176" />
+      </g>
+      <path d="M14 96 L58 98 L66 62 L74 130 L92 96 L136 98 L144 62 L152 130 L170 96 L214 98 L222 38 L230 148 L248 92 L292 98 L300 62 L308 130 L326 96 L370 98 L378 38 L386 148 L404 92 L448 98 L456 62 L464 130 L482 96 L526 98 L534 62 L542 130 L560 96 L604 98 L612 62 L620 130 L638 96 L676 98" fill="none" stroke="#111827" stroke-width="3" />
+    </g>
+    <g transform="translate(18 492)">
+      <rect width="690" height="176" fill="#fffaf0" stroke="#f3d5b5" />
+      <text x="18" y="26" font-size="14" font-family="Arial, sans-serif" fill="#475569">23:17:06  Night rhythm</text>
+      <g stroke="#fecaca">
+        <line x1="0" y1="64" x2="690" y2="64" />
+        <line x1="0" y1="118" x2="690" y2="118" />
+        <line x1="60" y1="0" x2="60" y2="176" />
+        <line x1="120" y1="0" x2="120" y2="176" />
+        <line x1="180" y1="0" x2="180" y2="176" />
+        <line x1="240" y1="0" x2="240" y2="176" />
+        <line x1="300" y1="0" x2="300" y2="176" />
+        <line x1="360" y1="0" x2="360" y2="176" />
+        <line x1="420" y1="0" x2="420" y2="176" />
+        <line x1="480" y1="0" x2="480" y2="176" />
+        <line x1="540" y1="0" x2="540" y2="176" />
+        <line x1="600" y1="0" x2="600" y2="176" />
+      </g>
+      <path d="M14 98 L54 98 L62 74 L70 122 L90 96 L134 98 L142 74 L150 122 L170 96 L214 98 L222 74 L230 122 L250 96 L294 98 L302 74 L310 122 L330 96 L374 98 L382 74 L390 122 L410 96 L454 98 L462 74 L470 122 L490 96 L534 98 L542 74 L550 122 L570 96 L614 98 L622 74 L630 122 L650 96 L676 98" fill="none" stroke="#111827" stroke-width="3" />
+    </g>
+  </g>
+</svg>
