@@ -1,42 +1,86 @@
-import { computed, ref } from "vue";
+import { computed, ref, toValue, watch } from "vue";
 import {
   AVERAGE_TEMPLATE_DEFAULT_LEAD,
+  AVERAGE_TEMPLATE_LEAD_OPTIONS,
   AVERAGE_TEMPLATE_LINE_LEADS,
   getAverageTemplateDisplayLead,
-  getAverageTemplateMeasurementRows,
-  getAverageTemplateWavePayload,
 } from "../utils/averageTemplateMock";
 import {
   AVERAGE_TEMPLATE_GAIN_OPTIONS,
   AVERAGE_TEMPLATE_SPEED_OPTIONS,
 } from "../utils/averageTemplateChartConfig";
 
-export function useAverageTemplateState() {
+export function useAverageTemplateState(options = {}) {
+  const leadOptions = computed(() => {
+    const nextLeadOptions = toValue(options.leadOptions);
+    return Array.isArray(nextLeadOptions) && nextLeadOptions.length
+      ? nextLeadOptions
+      : AVERAGE_TEMPLATE_LEAD_OPTIONS;
+  });
+  const lineLeadValues = computed(() => {
+    const normalizedLeadValues = leadOptions.value
+      .map((item) => String(item?.value || "").trim())
+      .filter(Boolean)
+      .filter((value) => value !== "ALL");
+
+    return normalizedLeadValues.length
+      ? normalizedLeadValues
+      : AVERAGE_TEMPLATE_LINE_LEADS;
+  });
+  const defaultLead = computed(() => {
+    const requestedDefaultLead = String(toValue(options.defaultLead) || "").trim();
+
+    if (lineLeadValues.value.includes(requestedDefaultLead)) {
+      return requestedDefaultLead;
+    }
+
+    return lineLeadValues.value[0] || AVERAGE_TEMPLATE_DEFAULT_LEAD;
+  });
   const gain = ref("100");
   const speed = ref("200");
-  const currentLead = ref(AVERAGE_TEMPLATE_DEFAULT_LEAD);
-  const selectedLeads = ref([AVERAGE_TEMPLATE_DEFAULT_LEAD]);
+  const currentLead = ref(defaultLead.value);
+  const selectedLeads = ref([defaultLead.value]);
   const allSelected = ref(false);
   const overlayCompare = ref(false);
 
   const displayLead = computed(() =>
     getAverageTemplateDisplayLead(currentLead.value),
   );
-  const chartPayload = computed(() =>
-    getAverageTemplateWavePayload(currentLead.value, selectedLeads.value),
-  );
-  const measurementRows = computed(() =>
-    getAverageTemplateMeasurementRows(displayLead.value),
+
+  watch(
+    [defaultLead, lineLeadValues],
+    ([nextDefaultLead, nextLeadValues]) => {
+      if (!nextLeadValues.includes(currentLead.value)) {
+        currentLead.value = nextDefaultLead;
+      }
+
+      selectedLeads.value = selectedLeads.value.filter((leadValue) =>
+        nextLeadValues.includes(leadValue),
+      );
+
+      if (!selectedLeads.value.length) {
+        selectedLeads.value = [currentLead.value];
+      }
+
+      if (!selectedLeads.value.includes(currentLead.value)) {
+        selectedLeads.value = [currentLead.value];
+      }
+
+      if (allSelected.value) {
+        selectedLeads.value = [...nextLeadValues];
+      }
+    },
+    { immediate: true },
   );
 
   const selectLead = (leadValue) => {
     if (leadValue === "ALL") {
       allSelected.value = true;
-      selectedLeads.value = [...AVERAGE_TEMPLATE_LINE_LEADS];
+      selectedLeads.value = [...lineLeadValues.value];
       return;
     }
 
-    if (!AVERAGE_TEMPLATE_LINE_LEADS.includes(leadValue)) {
+    if (!lineLeadValues.value.includes(leadValue)) {
       return;
     }
 
@@ -60,7 +104,7 @@ export function useAverageTemplateState() {
       if (currentLead.value === leadValue) {
         currentLead.value =
           nextSelectedLeads[nextSelectedLeads.length - 1] ||
-          AVERAGE_TEMPLATE_DEFAULT_LEAD;
+          defaultLead.value;
       }
     } else {
       nextSelectedLeads.push(leadValue);
@@ -76,7 +120,7 @@ export function useAverageTemplateState() {
 
     if (overlayCompare.value) {
       if (allSelected.value) {
-        selectedLeads.value = [...AVERAGE_TEMPLATE_LINE_LEADS];
+        selectedLeads.value = [...lineLeadValues.value];
         return;
       }
 
@@ -92,7 +136,7 @@ export function useAverageTemplateState() {
     }
 
     if (allSelected.value) {
-      selectedLeads.value = [...AVERAGE_TEMPLATE_LINE_LEADS];
+      selectedLeads.value = [...lineLeadValues.value];
       return;
     }
 
@@ -102,8 +146,8 @@ export function useAverageTemplateState() {
   const resetControls = () => {
     gain.value = "100";
     speed.value = "200";
-    currentLead.value = AVERAGE_TEMPLATE_DEFAULT_LEAD;
-    selectedLeads.value = [AVERAGE_TEMPLATE_DEFAULT_LEAD];
+    currentLead.value = defaultLead.value;
+    selectedLeads.value = [defaultLead.value];
     allSelected.value = false;
     overlayCompare.value = false;
   };
@@ -115,10 +159,10 @@ export function useAverageTemplateState() {
     selectedLeads,
     allSelected,
     overlayCompare,
+    leadOptions,
+    lineLeadValues,
     displayLead,
-    chartPayload,
-    measurementRows,
-    defaultLead: AVERAGE_TEMPLATE_DEFAULT_LEAD,
+    defaultLead,
     gainOptions: AVERAGE_TEMPLATE_GAIN_OPTIONS,
     speedOptions: AVERAGE_TEMPLATE_SPEED_OPTIONS,
     selectLead,

@@ -3,3 +3,6 @@ dist
 .spec-workflow
 .DS_Store
 *.log
+server/data/*.db
+server/data/*.db-shm
+server/data/*.db-wal

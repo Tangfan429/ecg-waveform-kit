@@ -17,6 +17,20 @@ export { default as WaveformToolbar } from "./components/WaveformToolbar.vue";
 export { printReportDocument } from "./utils/reportPrint";
 export { printStandardEcgDocument } from "./utils/standardEcgPrint";
 export {
+  LEAD_MODE_LEAD_I,
+  LEAD_MODE_OPTIONS,
+  LEAD_MODE_STANDARD,
+  getDefaultLeadModeLayout,
+  getLeadModeConfig,
+  getLeadModeLayoutOptions,
+  normalizeLeadModeLayout,
+} from "./utils/leadModes";
+export {
+  createEmptyWatchEcgViewModel,
+  createWatchEcgViewModel,
+} from "./utils/watchEcgAdapter";
+export { useWatchEcgFeed } from "./composables/useWatchEcgFeed";
+export {
   createDiagnosisSampleViewModel,
   createDiagnosisSampleViewModel as createStandardEcgViewModel,
 } from "./utils/sampleDataAdapter";

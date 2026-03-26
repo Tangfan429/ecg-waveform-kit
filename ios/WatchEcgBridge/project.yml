@@ -1,0 +1,43 @@
+name: WatchEcgBridge
+
+options:
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    PRODUCT_NAME: WatchEcgBridge
+    PRODUCT_BUNDLE_IDENTIFIER: com.ecgwaveformkit.watchEcgBridge
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: 6.0
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    TARGETED_DEVICE_FAMILY: "1"
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    INFOPLIST_FILE: Sources/Supporting/Info.plist
+    CODE_SIGN_ENTITLEMENTS: Sources/Supporting/WatchEcgBridge.entitlements
+
+targets:
+  WatchEcgBridge:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+        excludes:
+          - Resources/**
+          - Supporting/Info.plist
+          - Supporting/WatchEcgBridge.entitlements
+    resources:
+      - path: Sources/Resources
+
+schemes:
+  WatchEcgBridge:
+    build:
+      targets:
+        WatchEcgBridge: all
+    run:
+      config: Debug
+    archive:
+      config: Release

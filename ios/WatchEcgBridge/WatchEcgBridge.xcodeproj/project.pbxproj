@@ -1,0 +1,361 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0699CADDACB395FF75E0BEF6 /* WatchEcgAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FF71885BD3E0B8EAEEB345 /* WatchEcgAPIClient.swift */; };
+		24F2B5AC23CE0BA4EFAB60E9 /* WatchEcgBridgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F896B1DACCBD811898C32C /* WatchEcgBridgeApp.swift */; };
+		35E828B8B112D0B21AE27E3E /* HealthKitEcgService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 614A2B129EACF2C50CCD9583 /* HealthKitEcgService.swift */; };
+		415067AAD739ADA05FEE2595 /* WatchEcgPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D60E898681038E97761D62 /* WatchEcgPayload.swift */; };
+		672CBCC81682733DD8C11DD0 /* BridgePreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF55EC04E5235D10E6B924D7 /* BridgePreferences.swift */; };
+		7433EE8DFFDD9D92BEF60321 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E3E7000E466FFCD44068688 /* ContentView.swift */; };
+		8CB66D246D8012F2D04C2F0B /* BridgeAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 554012C0A08C5315619314F3 /* BridgeAppDelegate.swift */; };
+		B61A5E600906E50856C90E1B /* BridgeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9503A8E672E272E68348046 /* BridgeViewModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		09FF71885BD3E0B8EAEEB345 /* WatchEcgAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchEcgAPIClient.swift; sourceTree = "<group>"; };
+		52F896B1DACCBD811898C32C /* WatchEcgBridgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchEcgBridgeApp.swift; sourceTree = "<group>"; };
+		554012C0A08C5315619314F3 /* BridgeAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeAppDelegate.swift; sourceTree = "<group>"; };
+		614A2B129EACF2C50CCD9583 /* HealthKitEcgService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitEcgService.swift; sourceTree = "<group>"; };
+		6E3E7000E466FFCD44068688 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		83D60E898681038E97761D62 /* WatchEcgPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchEcgPayload.swift; sourceTree = "<group>"; };
+		B9503A8E672E272E68348046 /* BridgeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeViewModel.swift; sourceTree = "<group>"; };
+		EF55EC04E5235D10E6B924D7 /* BridgePreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgePreferences.swift; sourceTree = "<group>"; };
+		F81970198039724350795C64 /* WatchEcgBridge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WatchEcgBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		05E5E63354DA9B1DABD25A91 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				E9B7F6828C3274C029FBF8F6 /* App */,
+				AC1144903B9989D87E91DE7B /* HealthKit */,
+				41FBBDD2A1026D69EBF3BF93 /* Models */,
+				7E83FCF518B6BBBDB8D87806 /* Networking */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		172BE13AF35ADE88035B0D68 = {
+			isa = PBXGroup;
+			children = (
+				05E5E63354DA9B1DABD25A91 /* Sources */,
+				898A3D428045BC33F7F647F7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		41FBBDD2A1026D69EBF3BF93 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				83D60E898681038E97761D62 /* WatchEcgPayload.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		7E83FCF518B6BBBDB8D87806 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				09FF71885BD3E0B8EAEEB345 /* WatchEcgAPIClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		898A3D428045BC33F7F647F7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F81970198039724350795C64 /* WatchEcgBridge.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AC1144903B9989D87E91DE7B /* HealthKit */ = {
+			isa = PBXGroup;
+			children = (
+				614A2B129EACF2C50CCD9583 /* HealthKitEcgService.swift */,
+			);
+			path = HealthKit;
+			sourceTree = "<group>";
+		};
+		E9B7F6828C3274C029FBF8F6 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				554012C0A08C5315619314F3 /* BridgeAppDelegate.swift */,
+				EF55EC04E5235D10E6B924D7 /* BridgePreferences.swift */,
+				B9503A8E672E272E68348046 /* BridgeViewModel.swift */,
+				6E3E7000E466FFCD44068688 /* ContentView.swift */,
+				52F896B1DACCBD811898C32C /* WatchEcgBridgeApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F9717CAACABAE18D8C7A708B /* WatchEcgBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C02D26B0339EC07524DFA016 /* Build configuration list for PBXNativeTarget "WatchEcgBridge" */;
+			buildPhases = (
+				7F218174BB20194F05CE35C1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WatchEcgBridge;
+			packageProductDependencies = (
+			);
+			productName = WatchEcgBridge;
+			productReference = F81970198039724350795C64 /* WatchEcgBridge.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		675279AD3C570ACAE7F1550F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F9717CAACABAE18D8C7A708B = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = D32AA0D6993F398087E55878 /* Build configuration list for PBXProject "WatchEcgBridge" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 172BE13AF35ADE88035B0D68;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 898A3D428045BC33F7F647F7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F9717CAACABAE18D8C7A708B /* WatchEcgBridge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7F218174BB20194F05CE35C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8CB66D246D8012F2D04C2F0B /* BridgeAppDelegate.swift in Sources */,
+				672CBCC81682733DD8C11DD0 /* BridgePreferences.swift in Sources */,
+				B61A5E600906E50856C90E1B /* BridgeViewModel.swift in Sources */,
+				7433EE8DFFDD9D92BEF60321 /* ContentView.swift in Sources */,
+				35E828B8B112D0B21AE27E3E /* HealthKitEcgService.swift in Sources */,
+				0699CADDACB395FF75E0BEF6 /* WatchEcgAPIClient.swift in Sources */,
+				24F2B5AC23CE0BA4EFAB60E9 /* WatchEcgBridgeApp.swift in Sources */,
+				415067AAD739ADA05FEE2595 /* WatchEcgPayload.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		27BEB07227F04E9798177F15 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = Sources/Supporting/WatchEcgBridge.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Sources/Supporting/Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ecgwaveformkit.watchEcgBridge;
+				PRODUCT_NAME = WatchEcgBridge;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		37B73BB77BE51395FBFFD046 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = CMX966326D;
+				INFOPLIST_FILE = Sources/Supporting/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6506050E1E4200C1724743B6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = Sources/Supporting/WatchEcgBridge.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Sources/Supporting/Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ecgwaveformkit.watchEcgBridge;
+				PRODUCT_NAME = WatchEcgBridge;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F48C5B4211F08779AEF986A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = CMX966326D;
+				INFOPLIST_FILE = Sources/Supporting/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C02D26B0339EC07524DFA016 /* Build configuration list for PBXNativeTarget "WatchEcgBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F48C5B4211F08779AEF986A5 /* Debug */,
+				37B73BB77BE51395FBFFD046 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D32AA0D6993F398087E55878 /* Build configuration list for PBXProject "WatchEcgBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27BEB07227F04E9798177F15 /* Debug */,
+				6506050E1E4200C1724743B6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 675279AD3C570ACAE7F1550F /* Project object */;
+}

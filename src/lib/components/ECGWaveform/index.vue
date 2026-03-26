@@ -2,15 +2,20 @@
   <div
     ref="scrollRef"
     class="ecg-waveform-scroll"
+    :class="{ 'ecg-waveform-scroll--compact': isCompactLayout }"
     :style="waveformViewportStyle"
     @contextmenu.prevent="handleContextMenu"
     @scroll.passive="handleContextMenuClose"
   >
-    <div class="ecg-waveform-shell">
+    <div
+      class="ecg-waveform-shell"
+      :class="{ 'ecg-waveform-shell--compact': isCompactLayout }"
+    >
       <div class="ecg-waveform-stage" :style="waveformStageStyle">
         <div
           ref="containerRef"
           class="ecg-waveform"
+          :class="{ 'ecg-waveform--compact': isCompactLayout }"
           :style="canvasContainerStyle"
         >
           <!-- Keep interaction layers outside the canvas renderer. -->
@@ -56,6 +61,7 @@ import {
   getRequiredWaveformWidth,
 } from "../../utils/ecgCanvasRenderer";
 import { generateAllLeadsWaveform } from "../../utils/mockWaveformData";
+import { getLayoutConfig } from "../../utils/waveformLayouts";
 import WaveformParallelRulerOverlay from "./WaveformParallelRulerOverlay.vue";
 import WaveformRhythmNavigatorOverlay from "./WaveformRhythmNavigatorOverlay.vue";
 
@@ -162,6 +168,11 @@ const zoomScale = computed(() => {
 
   return Math.min(2, Math.max(0.5, numericZoom / 100));
 });
+const layoutConfig = computed(() => getLayoutConfig(props.layout));
+const isCompactLayout = computed(() => {
+  const { columns = 1, rows = 1, rhythmLeads = [] } = layoutConfig.value || {};
+  return columns === 1 && rows === 1 && !rhythmLeads.length;
+});
 
 const waveformViewportStyle = computed(() => ({
   backgroundColor: props.appearanceSettings?.backgroundColor || "#FFFFFF",
@@ -209,12 +220,11 @@ const updateCanvasSize = (waveformData = currentWaveformData.value) => {
     ...getRendererConfig(),
     waveformData,
   };
+  const requiredCanvasHeight = getRequiredWaveformHeight(rendererConfig);
+  const minimumCanvasHeight = isCompactLayout.value ? 240 : viewportHeight;
 
   canvasWidth.value = getRequiredWaveformWidth(rendererConfig);
-  canvasHeight.value = Math.max(
-    viewportHeight,
-    getRequiredWaveformHeight(rendererConfig),
-  );
+  canvasHeight.value = Math.max(minimumCanvasHeight, requiredCanvasHeight);
 };
 
 const syncWaveformGeometry = () => {
@@ -488,6 +498,10 @@ defineExpose({
   scrollbar-width: thin;
   scrollbar-color: rgba(53, 98, 236, 0.35) transparent;
 
+  &--compact {
+    align-self: flex-start;
+  }
+
   &::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -504,8 +518,14 @@ defineExpose({
 }
 
 .ecg-waveform-shell {
+  display: flex;
+  align-items: flex-start;
   min-width: 100%;
   min-height: 100%;
+
+  &--compact {
+    min-height: 0;
+  }
 }
 
 .ecg-waveform {
@@ -513,6 +533,10 @@ defineExpose({
   min-height: 400px;
   flex: none;
   will-change: transform;
+
+  &--compact {
+    min-height: 240px;
+  }
 }
 
 .ecg-waveform-stage {

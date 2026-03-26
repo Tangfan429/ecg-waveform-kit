@@ -29,7 +29,7 @@
 
       <div class="average-template-toolbar__lead-group">
         <button
-          v-for="lead in leadOptions"
+          v-for="lead in props.leadOptions"
           :key="lead.value"
           type="button"
           :class="[
@@ -43,6 +43,7 @@
       </div>
 
       <el-checkbox
+        v-if="props.showOverlayCompare"
         :model-value="overlayCompare"
         class="average-template-toolbar__checkbox"
         @change="emit('update:overlay-compare', $event)"
@@ -119,6 +120,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  leadOptions: {
+    type: Array,
+    default: () => AVERAGE_TEMPLATE_LEAD_OPTIONS,
+  },
+  showOverlayCompare: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits([
@@ -138,7 +147,6 @@ const uiText = {
   reset: "\u91cd\u7f6e",
 };
 
-const leadOptions = AVERAGE_TEMPLATE_LEAD_OPTIONS;
 const gainOptions = AVERAGE_TEMPLATE_GAIN_OPTIONS;
 const speedOptions = AVERAGE_TEMPLATE_SPEED_OPTIONS;
 
