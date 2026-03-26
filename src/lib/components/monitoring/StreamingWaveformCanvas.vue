@@ -1,5 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  shallowRef,
+  useTemplateRef,
+  watch,
+} from "vue";
 
 defineOptions({
   name: "StreamingWaveformCanvas",
@@ -58,14 +65,67 @@ const props = defineProps({
     type: Number,
     default: 168,
   },
+  fillArea: {
+    type: Boolean,
+    default: true,
+  },
+  oscilloscopeMode: {
+    type: Boolean,
+    default: false,
+  },
+  showSweepHead: {
+    type: Boolean,
+    default: false,
+  },
+  sweepHeadIndex: {
+    type: Number,
+    default: 0,
+  },
+  sweepCycleLength: {
+    type: Number,
+    default: 0,
+  },
 });
 
-const rootRef = ref(null);
-const canvasRef = ref(null);
-const stageWidth = ref(640);
+const rootRef = useTemplateRef("rootRef");
+const canvasRef = useTemplateRef("canvasRef");
+const stageWidth = shallowRef(640);
 
 let resizeObserver = null;
 let animationFrameId = 0;
+
+const normalizedSamples = computed(() =>
+  props.samples.map((sample) => {
+    if (sample === null || sample === undefined || sample === "") {
+      return null;
+    }
+
+    const numericValue = Number(sample);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }),
+);
+
+const sweepSegments = computed(() => {
+  const cleanSamples = normalizedSamples.value.filter((sample) => sample !== null);
+  const cycleLength = Math.max(
+    2,
+    Math.round(Number(props.sweepCycleLength) || cleanSamples.length || 2),
+  );
+  const current = cleanSamples.slice(-cycleLength);
+  const previous = cleanSamples.slice(-(cycleLength * 2), -cycleLength);
+
+  return {
+    cycleLength,
+    current,
+    previous: previous.length ? previous : current,
+  };
+});
+
+const hasDrawableSamples = computed(() =>
+  props.oscilloscopeMode
+    ? sweepSegments.value.current.length > 0
+    : normalizedSamples.value.some((sample) => sample !== null),
+);
 
 const xAxisTicks = computed(() => {
   if (!props.showXAxisLabels) {
@@ -102,6 +162,20 @@ const formatAxisLabel = (value) => {
   }
 
   return numericValue.toFixed(2);
+};
+
+const formatXAxisTick = (value) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return "--";
+  }
+
+  if (Number.isInteger(numericValue)) {
+    return String(numericValue);
+  }
+
+  return numericValue.toFixed(1);
 };
 
 const scheduleRender = () => {
@@ -142,7 +216,6 @@ const drawGrid = (context, width, height) => {
   const minorHorizontalStep = majorHorizontalStep / 2;
 
   context.save();
-
   context.strokeStyle = "rgba(148, 163, 184, 0.12)";
   context.lineWidth = 1;
 
@@ -179,42 +252,22 @@ const drawGrid = (context, width, height) => {
   context.restore();
 };
 
-const renderWaveform = () => {
-  const canvasElement = canvasRef.value;
+const drawBaseline = (context, width, height) => {
+  context.save();
+  context.strokeStyle = "rgba(148, 163, 184, 0.45)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(0, height / 2);
+  context.lineTo(width, height / 2);
+  context.stroke();
+  context.restore();
+};
 
-  if (!canvasElement) {
-    return;
-  }
-
-  const context = canvasElement.getContext("2d");
-  const pixelRatio = window.devicePixelRatio || 1;
-  const width = stageWidth.value;
-  const height = Math.max(120, props.height);
-
-  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  context.clearRect(0, 0, width, height);
-  context.fillStyle = props.backgroundColor;
-  context.fillRect(0, 0, width, height);
-
-  if (props.gridVisible) {
-    drawGrid(context, width, height);
-  }
-
-  if (!props.samples.length) {
-    context.strokeStyle = "rgba(148, 163, 184, 0.45)";
-    context.lineWidth = 1;
-    context.beginPath();
-    context.moveTo(0, height / 2);
-    context.lineTo(width, height / 2);
-    context.stroke();
-    return;
-  }
-
+const createYMapper = (height) => {
   const topPadding = 8;
   const bottomPadding = 8;
   const safeHeight = height - topPadding - bottomPadding;
   const range = Math.max(props.upperLimit - props.lowerLimit, 0.001);
-  const sampleCount = props.samples.length;
 
   const yFor = (value) => {
     const normalizedValue = (value - props.lowerLimit) / range;
@@ -222,41 +275,114 @@ const renderWaveform = () => {
     return topPadding + (1 - clampedValue) * safeHeight;
   };
 
-  const areaGradient = context.createLinearGradient(0, 0, 0, height);
-  areaGradient.addColorStop(0, `${props.lineColor}40`);
-  areaGradient.addColorStop(1, `${props.lineColor}00`);
+  return {
+    bottomPadding,
+    yFor,
+  };
+};
+
+const drawContinuousWaveform = (
+  context,
+  samples,
+  width,
+  height,
+  yFor,
+  fillArea,
+) => {
+  if (!samples.length) {
+    return;
+  }
+
+  const sampleCount = Math.max(samples.length, 1);
+  const xFor = (index) =>
+    sampleCount === 1 ? 0 : (index / (sampleCount - 1)) * width;
+
+  if (fillArea && sampleCount > 1) {
+    const areaGradient = context.createLinearGradient(0, 0, 0, height);
+    areaGradient.addColorStop(0, `${props.lineColor}40`);
+    areaGradient.addColorStop(1, `${props.lineColor}00`);
+
+    context.beginPath();
+
+    samples.forEach((sample, index) => {
+      const x = xFor(index);
+      const y = yFor(sample);
+
+      if (index === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+
+    context.lineTo(width, height - 8);
+    context.lineTo(0, height - 8);
+    context.closePath();
+    context.fillStyle = areaGradient;
+    context.fill();
+  }
 
   context.beginPath();
 
-  props.samples.forEach((sample, index) => {
-    const x =
-      sampleCount === 1 ? 0 : (index / (sampleCount - 1)) * width;
-    const y = yFor(Number(sample));
+  samples.forEach((sample, index) => {
+    const x = xFor(index);
+    const y = yFor(sample);
 
     if (index === 0) {
       context.moveTo(x, y);
-    } else {
-      context.lineTo(x, y);
+      return;
     }
+
+    context.lineTo(x, y);
   });
 
-  context.lineTo(width, height - bottomPadding);
-  context.lineTo(0, height - bottomPadding);
-  context.closePath();
-  context.fillStyle = areaGradient;
-  context.fill();
+  context.strokeStyle = props.lineColor;
+  context.lineWidth = props.oscilloscopeMode ? 2 : 1.75;
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  context.shadowColor = `${props.lineColor}66`;
+  context.shadowBlur = props.oscilloscopeMode ? 6 : 10;
+  context.stroke();
+  context.shadowBlur = 0;
+};
+
+const drawScrollWaveform = (context, width, height, yFor) => {
+  const samples = normalizedSamples.value;
+  const hasGaps = samples.some((sample) => sample === null);
+  const sampleCount = Math.max(samples.length, 1);
+  const xFor = (index) =>
+    sampleCount === 1 ? 0 : (index / (sampleCount - 1)) * width;
+
+  if (props.fillArea && !hasGaps) {
+    drawContinuousWaveform(
+      context,
+      samples.filter((sample) => sample !== null),
+      width,
+      height,
+      yFor,
+      true,
+    );
+  }
 
   context.beginPath();
-  props.samples.forEach((sample, index) => {
-    const x =
-      sampleCount === 1 ? 0 : (index / (sampleCount - 1)) * width;
-    const y = yFor(Number(sample));
+  let hasOpenSegment = false;
 
-    if (index === 0) {
-      context.moveTo(x, y);
-    } else {
-      context.lineTo(x, y);
+  samples.forEach((sample, index) => {
+    if (sample === null) {
+      hasOpenSegment = false;
+      return;
     }
+
+    const x = xFor(index);
+    const y = yFor(sample);
+
+    if (!hasOpenSegment) {
+      context.moveTo(x, y);
+      hasOpenSegment = true;
+      return;
+    }
+
+    context.lineTo(x, y);
   });
 
   context.strokeStyle = props.lineColor;
@@ -267,6 +393,118 @@ const renderWaveform = () => {
   context.shadowBlur = 10;
   context.stroke();
   context.shadowBlur = 0;
+};
+
+const drawSweepWaveform = (context, width, height, yFor) => {
+  const { current, previous, cycleLength } = sweepSegments.value;
+
+  if (!current.length) {
+    return;
+  }
+
+  const rawHeadIndex = Number(props.sweepHeadIndex) || 0;
+  const clampedHeadIndex = Math.max(0, Math.min(cycleLength, rawHeadIndex));
+  const revealRatio = cycleLength > 0 ? clampedHeadIndex / cycleLength : 0;
+  const revealX = Math.round(revealRatio * width);
+
+  if (previous.length && revealX < width) {
+    context.save();
+    context.beginPath();
+    context.rect(revealX, 0, width - revealX, height);
+    context.clip();
+    drawContinuousWaveform(
+      context,
+      previous,
+      width,
+      height,
+      yFor,
+      props.fillArea,
+    );
+    context.restore();
+  }
+
+  if (revealX > 0) {
+    context.save();
+    context.beginPath();
+    context.rect(0, 0, revealX, height);
+    context.clip();
+    drawContinuousWaveform(
+      context,
+      current,
+      width,
+      height,
+      yFor,
+      props.fillArea,
+    );
+    context.restore();
+  } else if (!previous.length) {
+    drawContinuousWaveform(
+      context,
+      current,
+      width,
+      height,
+      yFor,
+      props.fillArea,
+    );
+  }
+
+  if (props.showSweepHead) {
+    const headX = Math.max(0, Math.min(width, revealX));
+
+    context.save();
+    context.fillStyle = props.backgroundColor;
+    context.fillRect(headX, 0, 2, height);
+    context.strokeStyle = `${props.lineColor}66`;
+    context.lineWidth = 1;
+    context.setLineDash([6, 5]);
+    context.beginPath();
+    context.moveTo(headX, 0);
+    context.lineTo(headX, height);
+    context.stroke();
+    context.restore();
+  }
+};
+
+const renderWaveform = () => {
+  const canvasElement = canvasRef.value;
+
+  if (!canvasElement) {
+    return;
+  }
+
+  const context = canvasElement.getContext("2d");
+
+  if (!context) {
+    return;
+  }
+
+  const pixelRatio = window.devicePixelRatio || 1;
+  const width = stageWidth.value;
+  const height = Math.max(120, props.height);
+  const { yFor } = createYMapper(height);
+
+  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = props.backgroundColor;
+  context.fillRect(0, 0, width, height);
+
+  if (props.gridVisible) {
+    drawGrid(context, width, height);
+  }
+
+  if (!hasDrawableSamples.value) {
+    drawBaseline(context, width, height);
+    return;
+  }
+
+  drawBaseline(context, width, height);
+
+  if (props.oscilloscopeMode) {
+    drawSweepWaveform(context, width, height, yFor);
+    return;
+  }
+
+  drawScrollWaveform(context, width, height, yFor);
 };
 
 onMounted(() => {
@@ -291,6 +529,12 @@ watch(
     props.backgroundColor,
     props.gridVisible,
     props.height,
+    props.fillArea,
+    props.oscilloscopeMode,
+    props.showSweepHead,
+    props.sweepHeadIndex,
+    props.sweepCycleLength,
+    props.seconds,
   ],
   () => {
     syncCanvasSize();
@@ -336,7 +580,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-if="!samples.length"
+        v-if="!hasDrawableSamples"
         class="streaming-waveform-canvas__empty"
       >
         等待波形数据
@@ -351,7 +595,7 @@ onBeforeUnmount(() => {
         v-for="tick in xAxisTicks"
         :key="tick"
       >
-        {{ tick }}s
+        {{ formatXAxisTick(tick) }}s
       </span>
     </div>
   </div>

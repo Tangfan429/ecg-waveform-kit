@@ -8,6 +8,8 @@
         :selected-leads="selectedLeads"
         :all-selected="allSelected"
         :overlay-compare="overlayCompare"
+        :lead-options="leadOptions"
+        :show-overlay-compare="showOverlayCompare"
         @update:gain="handleGainChange"
         @update:speed="handleSpeedChange"
         @select-lead="handleLeadSelect"
@@ -22,8 +24,10 @@
           :gain="gain"
           :speed="speed"
           :wave-payload="chartPayload"
+          :sample-rate="props.analysisData?.sampleRate"
           :overlay-compare="overlayCompare"
           :appearance-settings="props.appearanceSettings"
+          :markers="markerDefinitions"
         />
       </div>
     </div>
@@ -64,8 +68,13 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { useDiagnosisLayout } from "../composables/useDiagnosisLayout";
 import { useAverageTemplateState } from "../composables/useAverageTemplateState";
+import {
+  getAverageTemplateMeasurementRows,
+  getAverageTemplateWavePayload,
+} from "../utils/averageTemplateMock";
 import AverageTemplateChart from "./AverageTemplateChart.vue";
 import AverageTemplateMeasurementPanel from "./AverageTemplateMeasurementPanel.vue";
 import AverageTemplateToolbar from "./AverageTemplateToolbar.vue";
@@ -78,6 +87,10 @@ const props = defineProps({
   appearanceSettings: {
     type: Object,
     default: () => ({}),
+  },
+  analysisData: {
+    type: Object,
+    default: null,
   },
 });
 
@@ -102,12 +115,57 @@ const {
   selectedLeads,
   allSelected,
   overlayCompare,
-  chartPayload,
-  measurementRows,
+  leadOptions,
   selectLead,
   setOverlayCompare,
   resetControls,
-} = useAverageTemplateState();
+} = useAverageTemplateState({
+  leadOptions: computed(() => props.analysisData?.leadOptions),
+  defaultLead: computed(() => props.analysisData?.defaultLead),
+});
+
+const chartPayload = computed(() => {
+  if (!props.analysisData?.wavesByLead) {
+    return getAverageTemplateWavePayload(currentLead.value, selectedLeads.value);
+  }
+
+  const selectedDisplayLeads = selectedLeads.value.filter((leadValue) =>
+    Object.prototype.hasOwnProperty.call(props.analysisData.wavesByLead, leadValue),
+  );
+  const safeDisplayLeads = selectedDisplayLeads.length
+    ? selectedDisplayLeads
+    : [props.analysisData.defaultLead || currentLead.value];
+  const focusLead = safeDisplayLeads.includes(currentLead.value)
+    ? currentLead.value
+    : safeDisplayLeads[safeDisplayLeads.length - 1];
+
+  return {
+    focusLead,
+    lines: safeDisplayLeads
+      .map((leadValue) => ({
+        id: leadValue,
+        lead: leadValue,
+        isPrimary: leadValue === focusLead,
+        wave: props.analysisData.wavesByLead?.[leadValue] || [],
+      }))
+      .sort((left, right) => Number(left.isPrimary) - Number(right.isPrimary)),
+  };
+});
+
+const measurementRows = computed(() => {
+  if (!props.analysisData?.measurementRowsByLead) {
+    return getAverageTemplateMeasurementRows(currentLead.value);
+  }
+
+  return props.analysisData.measurementRowsByLead?.[currentLead.value] || [];
+});
+
+const markerDefinitions = computed(() => props.analysisData?.markers || []);
+const showOverlayCompare = computed(
+  () =>
+    Array.isArray(leadOptions.value) &&
+    leadOptions.value.filter((item) => item?.value !== "ALL").length > 1,
+);
 
 const handlePlaceholderAction = (action) => {
   emit("toolbar-action", { action });

@@ -6,9 +6,15 @@ import AverageTemplateWorkspace from "./AverageTemplateWorkspace.vue";
 import HighFrequencyEcgWorkspace from "./HighFrequencyEcgWorkspace.vue";
 import QtDispersionWorkspace from "./QtDispersionWorkspace.vue";
 import ReportWorkspace from "./ReportWorkspace.vue";
+import SingleLeadRhythmWorkspace from "./SingleLeadRhythmWorkspace.vue";
 import SpectrumAnalysisWorkspace from "./SpectrumAnalysisWorkspace.vue";
 import StandardWaveformWorkspace from "./StandardWaveformWorkspace.vue";
 import VectorEcgWorkspace from "./VectorEcgWorkspace.vue";
+import {
+  LEAD_MODE_LEAD_I,
+  LEAD_MODE_STANDARD,
+  getDefaultLeadModeLayout,
+} from "../utils/leadModes";
 
 defineOptions({
   name: "WaveformCenter",
@@ -22,8 +28,16 @@ const analysisTypeModel = defineModel("analysisType", {
   type: String,
   default: "waveform",
 });
+const leadModeModel = defineModel("leadMode", {
+  type: String,
+  default: LEAD_MODE_STANDARD,
+});
 
 const props = defineProps({
+  examModeOptions: {
+    type: Array,
+    default: () => [],
+  },
   standardWaveformData: {
     type: Object,
     default: null,
@@ -64,6 +78,22 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  analysisTabs: {
+    type: Array,
+    default: () => [],
+  },
+  averageTemplateAnalysis: {
+    type: Object,
+    default: null,
+  },
+  rhythmAnalysis: {
+    type: Object,
+    default: null,
+  },
+  leadModeOptions: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const slots = useSlots();
@@ -73,7 +103,9 @@ const examModes = Object.freeze([
   { value: "dynamic_ecg", label: "动态心电" },
   { value: "dynamic_bp", label: "动态血压" },
 ]);
-
+const resolvedExamModes = computed(() =>
+  props.examModeOptions.length ? props.examModeOptions : examModes,
+);
 const analysisTabs = Object.freeze([
   { key: "waveform", label: "波形分析" },
   { key: "template", label: "平均模板" },
@@ -83,6 +115,9 @@ const analysisTabs = Object.freeze([
   { key: "qtDispersion", label: "QT离散度" },
   { key: "vector", label: "心电向量" },
 ]);
+const resolvedAnalysisTabs = computed(() =>
+  props.analysisTabs.length ? props.analysisTabs : analysisTabs,
+);
 
 const customAnalysisSlotName = computed(
   () => `analysis-${analysisTypeModel.value}`,
@@ -132,6 +167,15 @@ const currentBuiltinAnalysisComponent = computed(
 const currentBuiltinAnalysisData = computed(
   () => builtinAnalysisDataMap.value[analysisTypeModel.value],
 );
+const standardInitialLayout = computed(() =>
+  getDefaultLeadModeLayout(leadModeModel.value, analysisTypeModel.value),
+);
+const isCompactLeadWorkspace = computed(
+  () =>
+    isStandardExamMode.value &&
+    ["waveform", "rhythm"].includes(analysisTypeModel.value) &&
+    leadModeModel.value === LEAD_MODE_LEAD_I,
+);
 
 const handleExamModeChange = (mode) => {
   examModeModel.value = mode;
@@ -143,11 +187,17 @@ const handleExamModeChange = (mode) => {
 </script>
 
 <template>
-  <section class="waveform-center">
+  <section
+    class="waveform-center"
+    :class="{ 'waveform-center--compact': isCompactLeadWorkspace }"
+  >
     <header class="waveform-center__header">
-      <div class="waveform-center__mode-group">
+      <div
+        v-if="resolvedExamModes.length > 1"
+        class="waveform-center__mode-group"
+      >
         <button
-          v-for="mode in examModes"
+          v-for="mode in resolvedExamModes"
           :key="mode.value"
           type="button"
           :class="[
@@ -174,26 +224,51 @@ const handleExamModeChange = (mode) => {
     >
       <AnalysisTypeTabs
         v-model="analysisTypeModel"
-        :tabs="analysisTabs"
+        :tabs="resolvedAnalysisTabs"
       />
     </div>
 
     <div class="waveform-center__body">
       <StandardWaveformWorkspace
-        v-if="isStandardExamMode && ['waveform', 'rhythm'].includes(analysisTypeModel)"
+        v-if="isStandardExamMode && analysisTypeModel === 'waveform'"
         :key="analysisTypeModel"
         :waveform-data="standardWaveformData"
         :sample-rate="standardSampleRate"
         :duration="standardDuration"
         :measurement-data="measurementData"
         :print-meta="standardPrintMeta"
-        :initial-layout="analysisTypeModel === 'rhythm' ? '3x4+1R' : '6x2+1R'"
+        :lead-mode="leadModeModel"
+        :lead-mode-options="leadModeOptions"
+        :initial-layout="standardInitialLayout"
+        @update:lead-mode="leadModeModel = $event"
+        @toolbar-action="$emit('toolbar-action', $event)"
+        @print="$emit('print-standard', $event)"
+      />
+
+      <SingleLeadRhythmWorkspace
+        v-else-if="isStandardExamMode && analysisTypeModel === 'rhythm' && rhythmAnalysis"
+        :analysis="rhythmAnalysis"
+      />
+
+      <StandardWaveformWorkspace
+        v-else-if="isStandardExamMode && analysisTypeModel === 'rhythm'"
+        :key="analysisTypeModel"
+        :waveform-data="standardWaveformData"
+        :sample-rate="standardSampleRate"
+        :duration="standardDuration"
+        :measurement-data="measurementData"
+        :print-meta="standardPrintMeta"
+        :lead-mode="leadModeModel"
+        :lead-mode-options="leadModeOptions"
+        :initial-layout="standardInitialLayout"
+        @update:lead-mode="leadModeModel = $event"
         @toolbar-action="$emit('toolbar-action', $event)"
         @print="$emit('print-standard', $event)"
       />
 
       <AverageTemplateWorkspace
         v-else-if="isStandardExamMode && analysisTypeModel === 'template'"
+        :analysis-data="averageTemplateAnalysis"
         @toolbar-action="$emit('toolbar-action', { name: 'average-template-action', ...$event })"
       />
 
@@ -211,7 +286,7 @@ const handleExamModeChange = (mode) => {
 
       <AnalysisPlaceholder
         v-else-if="isStandardExamMode"
-        :title="analysisTabs.find((item) => item.key === analysisTypeModel)?.label || '分析扩展区'"
+        :title="resolvedAnalysisTabs.find((item) => item.key === analysisTypeModel)?.label || '分析扩展区'"
         :description="placeholderDescriptionMap[analysisTypeModel]"
       />
 
@@ -297,6 +372,14 @@ const handleExamModeChange = (mode) => {
   &__body {
     flex: 1;
     min-height: 0;
+  }
+
+  &--compact {
+    min-height: 540px;
+  }
+
+  &--compact &__body {
+    min-height: 420px;
   }
 }
 

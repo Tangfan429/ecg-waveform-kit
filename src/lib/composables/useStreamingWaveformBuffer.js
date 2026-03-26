@@ -45,13 +45,22 @@ export function useStreamingWaveformBuffer(options = {}) {
   const buffer = ref([]);
   const displayLower = ref(Number(toValue(options.initialLower) ?? -1));
   const displayUpper = ref(Number(toValue(options.initialUpper) ?? 1));
-  const lastSampleValue = ref(0);
+  const latestSample = ref(NaN);
+  const sweepHeadIndex = ref(0);
 
   const resolveSamplingRate = () =>
     Math.max(1, Number(toValue(options.samplingRate) || 1));
   const resolveWindowSeconds = () =>
     Math.max(2, Number(toValue(options.seconds) || 8));
   const resolvePadStrategy = () => toValue(options.padStrategy) || "hold";
+  const resolveRenderMode = () =>
+    toValue(options.mode) === "sweep" ? "sweep" : "scroll";
+  const resolveVisibleLength = () =>
+    Math.max(
+      MIN_VISIBLE_POINTS,
+      Math.round(resolveSamplingRate() * resolveWindowSeconds()),
+    );
+  const sweepCycleLength = computed(() => resolveVisibleLength());
 
   const applyFixedRange = () => {
     displayLower.value = Number(toValue(options.initialLower) ?? -1);
@@ -59,11 +68,9 @@ export function useStreamingWaveformBuffer(options = {}) {
   };
 
   const trimBuffer = () => {
-    const samplingRate = resolveSamplingRate();
-    const windowSeconds = resolveWindowSeconds();
     const bufferMaxLength = Math.max(
-      Math.round(samplingRate * windowSeconds * 1.8),
-      samplingRate * 2,
+      Math.round(resolveVisibleLength() * 2.4),
+      resolveSamplingRate() * 2,
     );
 
     buffer.value = clampBufferLength(buffer.value, bufferMaxLength);
@@ -74,7 +81,10 @@ export function useStreamingWaveformBuffer(options = {}) {
     const safeLower = targetLower;
     const safeUpper = safeLower + span;
 
-    if (!Number.isFinite(displayLower.value) || !Number.isFinite(displayUpper.value)) {
+    if (
+      !Number.isFinite(displayLower.value) ||
+      !Number.isFinite(displayUpper.value)
+    ) {
       displayLower.value = safeLower;
       displayUpper.value = safeUpper;
       return;
@@ -108,9 +118,10 @@ export function useStreamingWaveformBuffer(options = {}) {
       return;
     }
 
-    const sampleStep = currentBuffer.length > 1600
-      ? Math.ceil(currentBuffer.length / 1600)
-      : 1;
+    const sampleStep =
+      currentBuffer.length > 1600
+        ? Math.ceil(currentBuffer.length / 1600)
+        : 1;
     const sampled = [];
 
     for (let index = 0; index < currentBuffer.length; index += sampleStep) {
@@ -139,15 +150,22 @@ export function useStreamingWaveformBuffer(options = {}) {
       return;
     }
 
-    lastSampleValue.value = cleanSamples.at(-1);
+    latestSample.value = cleanSamples.at(-1);
     buffer.value = buffer.value.concat(cleanSamples);
     trimBuffer();
     recalculateAutoRange();
+
+    if (resolveRenderMode() === "sweep") {
+      sweepHeadIndex.value =
+        (sweepHeadIndex.value + cleanSamples.length) % resolveVisibleLength();
+    }
   };
 
   const clear = () => {
     buffer.value = [];
+    latestSample.value = NaN;
     applyFixedRange();
+    sweepHeadIndex.value = 0;
   };
 
   const visibleSamples = computed(() => {
@@ -159,6 +177,10 @@ export function useStreamingWaveformBuffer(options = {}) {
     );
     const sliced = buffer.value.slice(-targetLength);
 
+    if (resolveRenderMode() === "sweep") {
+      return sliced;
+    }
+
     if (sliced.length >= targetLength || resolvePadStrategy() === "none") {
       return sliced;
     }
@@ -168,7 +190,7 @@ export function useStreamingWaveformBuffer(options = {}) {
     }
 
     const fillerValue =
-      resolvePadStrategy() === "zero" ? 0 : Number(lastSampleValue.value || 0);
+      resolvePadStrategy() === "zero" ? 0 : Number(latestSample.value || 0);
     const result = sliced.slice();
 
     while (result.length < targetLength) {
@@ -179,10 +201,14 @@ export function useStreamingWaveformBuffer(options = {}) {
   });
 
   watch(
-    () => [toValue(options.seconds), toValue(options.samplingRate)],
+    () => [toValue(options.seconds), toValue(options.samplingRate), toValue(options.mode)],
     () => {
       trimBuffer();
       recalculateAutoRange();
+      sweepHeadIndex.value =
+        resolveRenderMode() === "sweep"
+          ? buffer.value.length % resolveVisibleLength()
+          : 0;
     },
     { immediate: true },
   );
@@ -206,8 +232,11 @@ export function useStreamingWaveformBuffer(options = {}) {
   return {
     buffer,
     visibleSamples,
+    sweepCycleLength,
     displayLower,
     displayUpper,
+    latestSample,
+    sweepHeadIndex,
     appendSamples,
     clear,
     recalculateAutoRange,

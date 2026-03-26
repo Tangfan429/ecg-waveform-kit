@@ -24,7 +24,7 @@ const scenarioKeyModel = defineModel("scenarioKey", {
   default: "",
 });
 
-const props = defineProps({
+defineProps({
   modeLabel: {
     type: String,
     default: "监护模式",
@@ -43,7 +43,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
+defineEmits([
   "zoom-in",
   "zoom-out",
   "zoom-reset",
@@ -254,24 +254,6 @@ const amplitudeOptions = Object.freeze([
     &__select {
       width: 100%;
       max-width: 280px;
-    }
-  }
-}
-
-@media (max-width: 640px) {
-  .monitoring-toolbar {
-    &__group {
-      width: 100%;
-    }
-
-    &__group--actions {
-      justify-content: flex-start;
-    }
-
-    &__select,
-    &__compact {
-      width: calc(50% - 6px);
-      min-width: 140px;
     }
   }
 }

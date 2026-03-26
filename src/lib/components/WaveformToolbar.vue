@@ -2,6 +2,25 @@
   <div class="waveform-toolbar">
     <div class="toolbar-row toolbar-row--waveform">
       <div class="waveform-params">
+        <div
+          class="lead-mode-switch"
+          role="tablist"
+          aria-label="导联模式切换"
+        >
+          <button
+            v-for="option in resolvedLeadModeOptions"
+            :key="option.value"
+            type="button"
+            class="lead-mode-switch__button"
+            :class="{
+              'lead-mode-switch__button--active': leadModeValue === option.value,
+            }"
+            @click="handleLeadModeChange(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+
         <el-select
           v-model="gainValue"
           placeholder="增益"
@@ -37,7 +56,7 @@
           @change="handleLayoutChange"
         >
           <el-option
-            v-for="option in layoutOptions"
+            v-for="option in resolvedLayoutOptions"
             :key="option.value"
             :label="option.label"
             :value="option.value"
@@ -71,11 +90,6 @@
             <span>平行尺</span>
           </div>
         </el-tooltip>
-
-        <div class="tool-btn" @click="handleLeadSwitch">
-          <el-icon><Switch /></el-icon>
-          <span>导联切换</span>
-        </div>
 
         <div class="tool-divider"></div>
 
@@ -140,8 +154,11 @@ import {
   Rank,
   Refresh,
   Setting,
-  Switch,
 } from "@element-plus/icons-vue";
+import {
+  LEAD_MODE_OPTIONS,
+  LEAD_MODE_STANDARD,
+} from "../utils/leadModes";
 
 defineOptions({
   name: "WaveformToolbar",
@@ -160,9 +177,21 @@ const props = defineProps({
     type: String,
     default: "6x2+1R",
   },
+  layoutOptions: {
+    type: Array,
+    default: () => [],
+  },
   displayMode: {
     type: String,
     default: "sync",
+  },
+  leadMode: {
+    type: String,
+    default: LEAD_MODE_STANDARD,
+  },
+  leadModeOptions: {
+    type: Array,
+    default: () => [],
   },
   parallelRulerActive: {
     type: Boolean,
@@ -181,6 +210,7 @@ const props = defineProps({
 const emit = defineEmits([
   "ruler",
   "lead-switch",
+  "lead-mode-change",
   "reanalyze",
   "open-settings",
   "zoom-change",
@@ -204,7 +234,8 @@ const speedOptions = [
   { label: "50mm/s", value: "50" },
 ];
 
-const layoutOptions = [
+const defaultLayoutOptions = [
+  { label: "Lead I", value: "leadI-single" },
   { label: "12×1", value: "12x1" },
   { label: "3×4", value: "3x4" },
   { label: "6×2", value: "6x2" },
@@ -218,6 +249,13 @@ const gainValue = ref(props.gain);
 const speedValue = ref(props.speed);
 const layoutValue = ref(props.layout);
 const displayModeValue = ref(props.displayMode);
+const leadModeValue = ref(props.leadMode);
+const resolvedLeadModeOptions = computed(() =>
+  props.leadModeOptions.length ? props.leadModeOptions : LEAD_MODE_OPTIONS,
+);
+const resolvedLayoutOptions = computed(() =>
+  props.layoutOptions.length ? props.layoutOptions : defaultLayoutOptions,
+);
 
 const normalizedZoom = computed(() => {
   const numericValue = Number(props.zoom);
@@ -259,12 +297,25 @@ watch(
   },
 );
 
+watch(
+  () => props.leadMode,
+  (value) => {
+    leadModeValue.value = value;
+  },
+);
+
 const handleRuler = () => {
   emit("ruler");
 };
 
-const handleLeadSwitch = () => {
-  emit("lead-switch");
+const handleLeadModeChange = (value) => {
+  if (leadModeValue.value === value) {
+    return;
+  }
+
+  leadModeValue.value = value;
+  emit("lead-mode-change", value);
+  emit("lead-switch", value);
 };
 
 const handleReanalyze = () => {
@@ -329,6 +380,35 @@ const handleDisplayModeChange = (value) => {
   gap: $spacing-sm;
   min-width: 0;
   flex-wrap: wrap;
+}
+
+.lead-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(229, 236, 255, 0.72);
+  border: 1px solid rgba(53, 98, 236, 0.16);
+
+  &__button {
+    min-width: 88px;
+    height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    color: rgba(15, 23, 42, 0.72);
+    background: transparent;
+    font: $font-body-md;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &--active {
+      color: #ffffff;
+      background: linear-gradient(135deg, #3562ec 0%, #4f7bff 100%);
+      box-shadow: 0 8px 18px rgba(53, 98, 236, 0.28);
+    }
+  }
 }
 
 .param-select {

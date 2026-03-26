@@ -23,6 +23,12 @@ export const LIMB_LEADS = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF']
 export const CHEST_LEADS = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']
 
 export const LAYOUT_CONFIGS = {
+  'leadI-single': {
+    columns: 1,
+    rows: 1,
+    leads: [['I']],
+    rhythmLeads: []
+  },
   '12x1': {
     columns: 1,
     rows: 12,

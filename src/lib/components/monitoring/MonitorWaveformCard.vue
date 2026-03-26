@@ -43,11 +43,19 @@ const props = defineProps({
 });
 
 const resolvedChannel = computed(() => props.channel || {});
+const resolvedRenderMode = computed(() =>
+  resolvedChannel.value.renderMode === "sweep" ? "sweep" : "scroll",
+);
+const resolvedFillArea = computed(() => resolvedChannel.value.fillArea !== false);
 
 const {
+  buffer,
   visibleSamples,
+  sweepCycleLength,
   displayLower,
   displayUpper,
+  latestSample,
+  sweepHeadIndex,
   appendSamples,
   clear,
 } = useStreamingWaveformBuffer({
@@ -56,6 +64,7 @@ const {
   initialLower: () => resolvedChannel.value.lowerLimit ?? -1,
   initialUpper: () => resolvedChannel.value.upperLimit ?? 1,
   autoRange: () => resolvedChannel.value.autoRange !== false,
+  mode: () => resolvedRenderMode.value,
   minSpan: () =>
     Math.max(
       0.15,
@@ -65,22 +74,26 @@ const {
     ),
 });
 
-const currentValue = computed(() => {
-  const lastValue = visibleSamples.value.at(-1);
+const renderSamples = computed(() =>
+  resolvedRenderMode.value === "sweep" ? buffer.value : visibleSamples.value,
+);
 
-  if (!Number.isFinite(lastValue)) {
+const currentValue = computed(() => {
+  const numericValue = Number(latestSample.value);
+
+  if (!Number.isFinite(numericValue)) {
     return "--";
   }
 
-  if (Math.abs(lastValue) >= 100) {
-    return lastValue.toFixed(0);
+  if (Math.abs(numericValue) >= 100) {
+    return numericValue.toFixed(0);
   }
 
-  if (Math.abs(lastValue) >= 10) {
-    return lastValue.toFixed(1);
+  if (Math.abs(numericValue) >= 10) {
+    return numericValue.toFixed(1);
   }
 
-  return lastValue.toFixed(2);
+  return numericValue.toFixed(2);
 });
 
 const effectiveRange = computed(() => {
@@ -149,7 +162,7 @@ watch(
     </header>
 
     <StreamingWaveformCanvas
-      :samples="visibleSamples"
+      :samples="renderSamples"
       :seconds="timeWindow"
       :line-color="resolvedChannel.color || '#4f7cff'"
       :lower-limit="effectiveRange.lower"
@@ -161,6 +174,11 @@ watch(
       :x-axis-label-interval="Math.max(1, Math.round(timeWindow / 4))"
       :height="canvasHeight"
       :background-color="backgroundColor"
+      :fill-area="resolvedFillArea"
+      :oscilloscope-mode="resolvedRenderMode === 'sweep'"
+      :show-sweep-head="resolvedRenderMode === 'sweep'"
+      :sweep-head-index="sweepHeadIndex"
+      :sweep-cycle-length="sweepCycleLength"
     />
   </article>
 </template>

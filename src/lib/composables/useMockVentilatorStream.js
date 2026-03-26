@@ -24,7 +24,8 @@ function createVentilatorState(time, signal) {
     const inspirationPhase = phase / inspirationDuration;
     pressure =
       peep +
-      (pip - peep) * Math.sin(Math.min(1, inspirationPhase * 1.25) * Math.PI * 0.5);
+      (pip - peep) *
+        Math.sin(Math.min(1, inspirationPhase * 1.25) * Math.PI * 0.5);
     pressure =
       inspirationPhase > 0.55
         ? plateau + (pip - plateau) * (1 - inspirationPhase)
@@ -34,13 +35,15 @@ function createVentilatorState(time, signal) {
       Math.sin(inspirationPhase * Math.PI) * 3.2;
     volume =
       tidalVolume *
-      Math.min(1, 0.15 + inspirationPhase * 0.92 - inspirationPhase * inspirationPhase * 0.08);
+      Math.min(
+        1,
+        0.15 + inspirationPhase * 0.92 - inspirationPhase * inspirationPhase * 0.08,
+      );
   } else {
-    const expirationPhase = (phase - inspirationDuration) / (1 - inspirationDuration);
+    const expirationPhase =
+      (phase - inspirationDuration) / (1 - inspirationDuration);
     pressure = peep + Math.exp(-expirationPhase * 5.4) * (plateau - peep);
-    flow =
-      (signal.expiratoryFlow || -28) *
-      Math.exp(-expirationPhase * 2.8);
+    flow = (signal.expiratoryFlow || -28) * Math.exp(-expirationPhase * 2.8);
     volume = tidalVolume * Math.exp(-expirationPhase * 2.1);
   }
 
@@ -56,7 +59,10 @@ function createVentilatorState(time, signal) {
 }
 
 function createWaveChunk(channel, signal, startTime, frameDuration) {
-  const sampleCount = Math.max(1, Math.round(channel.samplingRate * frameDuration));
+  const sampleCount = Math.max(
+    1,
+    Math.round(channel.samplingRate * frameDuration),
+  );
   const values = [];
 
   for (let index = 0; index < sampleCount; index += 1) {
@@ -101,11 +107,111 @@ function createLoopPoints(signal) {
   };
 }
 
+function formatMetricValue(value, digits = 0) {
+  const factor = 10 ** digits;
+  return String(Math.round(value * factor) / factor);
+}
+
+function createVentilatorMetrics(scenario, currentState) {
+  const signal = scenario.signal;
+  const ieDenominator = Math.max(
+    1,
+    Math.round((1 - signal.inspiratoryRatio) / signal.inspiratoryRatio),
+  );
+  const minuteVentilation = (signal.tidalVolume * signal.rate) / 1000;
+
+  return [
+    {
+      id: "resp-rate",
+      name: "呼吸频率",
+      unit: "次/分",
+      preset_value: signal.rate,
+      value: Math.round(
+        signal.rate + Math.sin(currentState.pressure * 0.02) * 1.2,
+      ),
+    },
+    {
+      id: "tidal-volume",
+      name: "潮气量",
+      unit: "mL",
+      preset_value: signal.tidalVolume,
+      value: Math.round(
+        signal.tidalVolume + Math.sin(currentState.volume * 0.004) * 12,
+      ),
+    },
+    {
+      id: "peep",
+      name: "PEEP",
+      unit: "cmH2O",
+      preset_value: signal.peep,
+      value: formatMetricValue(
+        signal.peep + Math.sin(currentState.pressure * 0.08) * 0.3,
+        1,
+      ),
+    },
+    {
+      id: "pip",
+      name: "PIP",
+      unit: "cmH2O",
+      preset_value: signal.pip,
+      value: formatMetricValue(
+        signal.pip + Math.cos(currentState.pressure * 0.04) * 0.6,
+        1,
+      ),
+    },
+    {
+      id: "minute-ventilation",
+      name: "分钟通气量",
+      unit: "L/min",
+      preset_value: formatMetricValue(minuteVentilation, 1),
+      value: formatMetricValue(
+        minuteVentilation + Math.sin(currentState.flow * 0.03) * 0.3,
+        1,
+      ),
+    },
+    {
+      id: "ie-ratio",
+      name: "I:E",
+      unit: "",
+      preset_value: `1:${ieDenominator}`,
+      value: `1:${ieDenominator}`,
+    },
+  ];
+}
+
+function createVentilatorWarnings(scenario, currentState, timestamp) {
+  const warnings = [];
+
+  if (scenario.key === "pressure_control") {
+    warnings.push({
+      id: "pressure-platform",
+      level: "info",
+      title: "平台压趋势",
+      text: `平台压 ${formatMetricValue(currentState.pressure, 1)} cmH2O`,
+      time: timestamp,
+    });
+  }
+
+  if (scenario.key === "weaning_trial") {
+    warnings.push({
+      id: "weaning-observe",
+      level: "warning",
+      title: "撤机观察",
+      text: "自主呼吸增强，请关注流速回零情况。",
+      time: timestamp,
+    });
+  }
+
+  return warnings;
+}
+
 export function useMockVentilatorStream(options = {}) {
   const payload = ref({
     source: "mock",
     waveList: [],
     circleList: [],
+    list: [],
+    warning: [],
     timestamp: Date.now(),
     scenarioKey: "ac_volume",
     scenarioLabel: "容量控制通气",
@@ -133,6 +239,8 @@ export function useMockVentilatorStream(options = {}) {
     tickCount.value += 1;
 
     const loops = createLoopPoints(scenario.signal);
+    const currentState = createVentilatorState(elapsedSeconds, scenario.signal);
+    const frameTime = new Date().toLocaleTimeString();
 
     payload.value = {
       source: "mock",
@@ -141,6 +249,8 @@ export function useMockVentilatorStream(options = {}) {
       scenarioLabel: scenario.label,
       ventilatorLabel: scenario.ventilatorLabel,
       description: scenario.description,
+      list: createVentilatorMetrics(scenario, currentState),
+      warning: createVentilatorWarnings(scenario, currentState, frameTime),
       waveList: scenario.waveforms.map((waveform) => ({
         name: waveform.code,
         label: waveform.label,
@@ -149,7 +259,9 @@ export function useMockVentilatorStream(options = {}) {
         samplingRate: waveform.samplingRate,
         lowerLimit: waveform.lowerLimit,
         upperLimit: waveform.upperLimit,
-        autoRange: true,
+        autoRange: waveform.autoRange ?? false,
+        renderMode: waveform.renderMode || "sweep",
+        fillArea: waveform.fillArea ?? false,
         value: createWaveChunk(
           waveform,
           scenario.signal,
