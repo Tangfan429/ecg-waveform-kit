@@ -179,6 +179,10 @@ const props = defineProps({
     type: String,
     default: "II",
   },
+  sampleRate: {
+    type: Number,
+    default: AVERAGE_TEMPLATE_SAMPLE_RATE,
+  },
   gain: {
     type: String,
     default: "100",
@@ -201,6 +205,10 @@ const props = defineProps({
   appearanceSettings: {
     type: Object,
     default: () => ({}),
+  },
+  markers: {
+    type: Array,
+    default: () => AVERAGE_TEMPLATE_MARKERS,
   },
 });
 
@@ -288,13 +296,18 @@ const smallGridDots = computed(() => {
 
   return dots;
 });
+const resolvedSampleRate = computed(() =>
+  Number.isFinite(Number(props.sampleRate)) && Number(props.sampleRate) > 0
+    ? Number(props.sampleRate)
+    : AVERAGE_TEMPLATE_SAMPLE_RATE,
+);
 
 const waveMetrics = computed(() => {
   const lines = props.wavePayload?.lines || [];
   const primaryLine = lines.find((line) => line.isPrimary) || lines[0] || null;
   const sampleCount = Math.max(primaryLine?.wave?.length || 0, 2);
   const pixelsPerSecond = getAverageTemplatePixelsPerSecond(props.speed);
-  const pixelsPerSample = pixelsPerSecond / AVERAGE_TEMPLATE_SAMPLE_RATE;
+  const pixelsPerSample = pixelsPerSecond / resolvedSampleRate.value;
   const startX = plotArea.left + AVERAGE_TEMPLATE_WAVE_LAYOUT.startPadding;
   const renderEndX = plotArea.right - AVERAGE_TEMPLATE_WAVE_LAYOUT.trailingPadding;
   const rawWaveWidth = Math.max(
@@ -346,7 +359,7 @@ const markerPositions = computed(() => {
   const { sampleCount, pixelsPerSample, startX, dataEndX } = waveMetrics.value;
   const maxIndex = Math.max(0, sampleCount - 1);
 
-  return AVERAGE_TEMPLATE_MARKERS.map((marker) => {
+  return (props.markers || []).map((marker) => {
     const sampleIndex = Math.round(maxIndex * marker.ratio);
     const markerX = Math.min(dataEndX, startX + sampleIndex * pixelsPerSample);
 

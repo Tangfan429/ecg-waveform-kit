@@ -6,6 +6,16 @@ import { useWaveformViewport } from "../composables/useWaveformViewport";
 import { generateAllLeadsWaveform } from "../utils/mockWaveformData";
 import { printStandardEcgDocument } from "../utils/standardEcgPrint";
 import {
+  LEAD_MODE_OPTIONS,
+  getLeadModeConfig,
+  getLeadModeLayoutOptions,
+  getLeadModePrintMeta,
+  getLeadModeWaveformData,
+  isSingleLeadMode,
+  normalizeLeadMode,
+  normalizeLeadModeLayout,
+} from "../utils/leadModes";
+import {
   createWaveformContextMenuState,
   getWaveformContextMenuItemLabel,
 } from "../utils/waveformContextMenu";
@@ -44,6 +54,14 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  leadMode: {
+    type: String,
+    default: "standard12",
+  },
+  leadModeOptions: {
+    type: Array,
+    default: () => [],
+  },
   initialLayout: {
     type: String,
     default: "6x2+1R",
@@ -62,12 +80,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["toolbar-action", "print"]);
+const emit = defineEmits(["toolbar-action", "print", "update:leadMode"]);
 
 const workspaceRef = useTemplateRef("workspaceRef");
 const waveformRef = useTemplateRef("waveformRef");
 
-const waveformLayout = ref(props.initialLayout);
+const waveformLayout = ref(
+  normalizeLeadModeLayout(props.leadMode, props.initialLayout),
+);
 const waveformGain = ref(props.initialGain);
 const waveformSpeed = ref(props.initialSpeed);
 const waveformDisplayMode = ref(props.initialDisplayMode);
@@ -83,9 +103,30 @@ const waveformContextMenuPosition = ref({
 const isWaveformContextMenuVisible = ref(false);
 const waveformContextMenuState = ref(createWaveformContextMenuState());
 
-const resolvedWaveformData = computed(() =>
+const leadModeOptions = computed(() =>
+  props.leadModeOptions.length ? props.leadModeOptions : LEAD_MODE_OPTIONS,
+);
+const resolvedLeadMode = computed(() => normalizeLeadMode(props.leadMode));
+const resolvedLeadModeConfig = computed(() =>
+  getLeadModeConfig(resolvedLeadMode.value),
+);
+const availableLayoutOptions = computed(() =>
+  getLeadModeLayoutOptions(resolvedLeadMode.value),
+);
+const isSingleLeadView = computed(() => isSingleLeadMode(resolvedLeadMode.value));
+const printActionLabel = computed(() =>
+  isSingleLeadView.value ? "单导联打印待接入" : "打印波形",
+);
+
+const baseWaveformData = computed(() =>
   props.waveformData ||
   generateAllLeadsWaveform(Math.max(props.duration, 20), props.sampleRate),
+);
+const resolvedWaveformData = computed(() =>
+  getLeadModeWaveformData(resolvedLeadMode.value, baseWaveformData.value),
+);
+const resolvedPrintMeta = computed(() =>
+  getLeadModePrintMeta(resolvedLeadMode.value, props.printMeta),
 );
 const waveformDuration = computed(() =>
   getStandardWaveformDuration(waveformSpeed.value, props.duration),
@@ -155,9 +196,10 @@ watch(
     props.initialGain,
     props.initialSpeed,
     props.initialDisplayMode,
+    props.leadMode,
   ],
-  ([nextLayout, nextGain, nextSpeed, nextDisplayMode]) => {
-    waveformLayout.value = nextLayout;
+  ([nextLayout, nextGain, nextSpeed, nextDisplayMode, nextLeadMode]) => {
+    waveformLayout.value = normalizeLeadModeLayout(nextLeadMode, nextLayout);
     waveformGain.value = nextGain;
     waveformSpeed.value = nextSpeed;
     waveformDisplayMode.value = nextDisplayMode;
@@ -191,10 +233,6 @@ const handleRuler = () => {
   if (!isParallelRulerActive.value) {
     clearParallelRulers();
   }
-};
-
-const handleLeadSwitch = () => {
-  emitToolbarAction("lead-switch");
 };
 
 const handleReanalyze = () => {
@@ -279,6 +317,11 @@ const handleFullscreen = async () => {
 };
 
 const handlePrint = () => {
+  if (isSingleLeadView.value) {
+    ElMessage.info("Lead I 单导联浏览已接通，打印模板暂未单独适配。");
+    return;
+  }
+
   const success = printStandardEcgDocument({
     waveformData: resolvedWaveformData.value,
     sampleRate: props.sampleRate,
@@ -287,7 +330,7 @@ const handlePrint = () => {
     speed: waveformSpeed.value,
     appearanceSettings: waveformAppearanceConfig.value,
     measurementData: props.measurementData,
-    meta: props.printMeta,
+    meta: resolvedPrintMeta.value,
   });
 
   if (!success) {
@@ -311,11 +354,38 @@ const handleSpeedValueChange = (value) => {
 };
 
 const handleLayoutValueChange = (value) => {
-  waveformLayout.value = value;
+  waveformLayout.value = normalizeLeadModeLayout(resolvedLeadMode.value, value);
 };
 
 const handleDisplayModeValueChange = (value) => {
   waveformDisplayMode.value = value;
+};
+
+const handleLeadModeValueChange = (value) => {
+  const normalizedLeadMode = normalizeLeadMode(value);
+  const leadModeChanged = normalizedLeadMode !== resolvedLeadMode.value;
+
+  waveformLayout.value = normalizeLeadModeLayout(
+    normalizedLeadMode,
+    props.initialLayout,
+  );
+  syncWindowStartMs.value = 0;
+  closeWaveformContextMenu();
+
+  if (isParallelRulerActive.value) {
+    clearParallelRulers();
+    isParallelRulerActive.value = false;
+  }
+
+  if (!leadModeChanged) {
+    return;
+  }
+
+  emit("update:leadMode", normalizedLeadMode);
+  emitToolbarAction("lead-mode-change", {
+    leadMode: normalizedLeadMode,
+    leadModeLabel: getLeadModeConfig(normalizedLeadMode).label,
+  });
 };
 </script>
 
@@ -326,12 +396,15 @@ const handleDisplayModeValueChange = (value) => {
         :gain="waveformGain"
         :speed="waveformSpeed"
         :layout="waveformLayout"
+        :layout-options="availableLayoutOptions"
         :display-mode="waveformDisplayMode"
+        :lead-mode="resolvedLeadMode"
+        :lead-mode-options="leadModeOptions"
         :zoom="waveformZoomPercent"
         :fullscreen-active="isWaveformFullscreen"
         :parallel-ruler-active="isParallelRulerActive"
         @ruler="handleRuler"
-        @lead-switch="handleLeadSwitch"
+        @lead-mode-change="handleLeadModeValueChange"
         @reanalyze="handleReanalyze"
         @open-settings="handleOpenWaveformSettings"
         @zoom-change="handleZoomChange"
@@ -343,7 +416,18 @@ const handleDisplayModeValueChange = (value) => {
       />
 
       <div class="standard-waveform-workspace__actions">
-        <ElButton type="primary" plain @click="handlePrint">打印波形</ElButton>
+        <div class="standard-waveform-workspace__lead-mode-badge">
+          <span class="standard-waveform-workspace__lead-mode-label">
+            当前联动
+          </span>
+          <strong class="standard-waveform-workspace__lead-mode-value">
+            {{ resolvedLeadModeConfig.shortLabel }}
+          </strong>
+        </div>
+
+        <ElButton type="primary" plain @click="handlePrint">
+          {{ printActionLabel }}
+        </ElButton>
       </div>
     </header>
 
@@ -430,6 +514,28 @@ const handleDisplayModeValueChange = (value) => {
     align-items: center;
     gap: $spacing-sm;
     flex-shrink: 0;
+  }
+
+  &__lead-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    color: rgba(15, 23, 42, 0.78);
+    background: rgba(239, 244, 255, 0.88);
+    border: 1px solid rgba(53, 98, 236, 0.14);
+  }
+
+  &__lead-mode-label {
+    font-size: 12px;
+    color: rgba(15, 23, 42, 0.52);
+  }
+
+  &__lead-mode-value {
+    font-size: 13px;
+    color: rgba(15, 23, 42, 0.9);
   }
 
   &__body {
