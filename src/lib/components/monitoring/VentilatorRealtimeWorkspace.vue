@@ -1,5 +1,5 @@
 <script setup>
-import { computed, useTemplateRef } from "vue";
+import { computed, useSlots, useTemplateRef } from "vue";
 import { normalizeVentilatorPayload } from "../../adapters/normalizeVentilatorPayload";
 import { useMockVentilatorStream } from "../../composables/useMockVentilatorStream";
 import { printMonitoringDocument } from "../../utils/monitoringPrint";
@@ -45,6 +45,7 @@ const props = defineProps({
   },
 });
 
+const slots = useSlots();
 const workspaceRef = useTemplateRef("workspaceRef");
 
 const { payload: mockPayload, tickCount } = useMockVentilatorStream({
@@ -59,11 +60,21 @@ const normalizedFrame = computed(() =>
 );
 
 const sourceLabel = computed(() =>
-  normalizedFrame.value.source === "mock" ? "Mock Stream" : "External Payload",
+  normalizedFrame.value.source === "mock" ? "Mock 数据流" : "外部数据",
 );
 const updateText = computed(() =>
   new Date(normalizedFrame.value.timestamp || Date.now()).toLocaleTimeString(),
 );
+const hasLeftPanel = computed(() => Boolean(slots["left-panel"]));
+const hasAlarmPanel = computed(() => Boolean(slots["alarm-panel"]));
+const hasBottomPanel = computed(() => Boolean(slots["bottom-panel"]));
+const hasDeviceActions = computed(() => Boolean(slots["device-actions"]));
+const bodyClass = computed(() => ({
+  "ventilator-workspace__body--with-left": hasLeftPanel.value,
+  "ventilator-workspace__body--with-alarm": hasAlarmPanel.value,
+  "ventilator-workspace__body--with-both":
+    hasLeftPanel.value && hasAlarmPanel.value,
+}));
 
 const printWorkspace = () =>
   printMonitoringDocument({
@@ -86,15 +97,34 @@ defineExpose({
       <div>
         <h2 class="ventilator-workspace__title">{{ title }}</h2>
         <p class="ventilator-workspace__description">
-          {{ normalizedFrame.description || "模拟呼吸机压力、流速、容量三联波形与经典环图布局。" }}
+          {{
+            normalizedFrame.description ||
+              "保留呼吸机压力、流速、容量波形与环图能力，呼吸机波形默认采用从左到右扫屏渲染，并通过插槽承接左侧指标、报警和设备动作扩展。"
+          }}
         </p>
       </div>
 
-      <div class="ventilator-workspace__chips">
-        <span class="ventilator-workspace__chip">{{ normalizedFrame.ventilatorLabel || "呼吸设备" }}</span>
-        <span class="ventilator-workspace__chip">{{ normalizedFrame.scenarioLabel || "呼吸机场景" }}</span>
-        <span class="ventilator-workspace__chip">{{ sourceLabel }}</span>
-        <span class="ventilator-workspace__chip">Tick {{ tickCount }}</span>
+      <div class="ventilator-workspace__header-side">
+        <div class="ventilator-workspace__chips">
+          <span class="ventilator-workspace__chip">
+            {{ normalizedFrame.ventilatorLabel || "呼吸机设备" }}
+          </span>
+          <span class="ventilator-workspace__chip">
+            {{ normalizedFrame.scenarioLabel || "呼吸机场景" }}
+          </span>
+          <span class="ventilator-workspace__chip">{{ sourceLabel }}</span>
+          <span class="ventilator-workspace__chip">Tick {{ tickCount }}</span>
+        </div>
+
+        <div
+          v-if="hasDeviceActions"
+          class="ventilator-workspace__device-actions"
+        >
+          <slot
+            name="device-actions"
+            :frame="normalizedFrame"
+          />
+        </div>
       </div>
     </header>
 
@@ -103,41 +133,84 @@ defineExpose({
       <span>时间窗 {{ timeWindow }}s</span>
       <span>垂直缩放 {{ amplitudeScale.toFixed(2) }}x</span>
       <span>{{ paused ? "已暂停" : "实时中" }}</span>
+      <span v-if="normalizedFrame.metrics.length">
+        指标 {{ normalizedFrame.metrics.length }} 项
+      </span>
+      <span v-if="normalizedFrame.warning.length">
+        报警 {{ normalizedFrame.warning.length }}
+      </span>
     </div>
 
     <div
-      v-if="normalizedFrame.waveforms.length"
-      class="ventilator-workspace__wave-grid"
+      class="ventilator-workspace__body"
+      :class="bodyClass"
     >
-      <MonitorWaveformCard
-        v-for="waveform in normalizedFrame.waveforms"
-        :key="waveform.id"
-        :channel="waveform"
-        :paused="paused"
-        :time-window="timeWindow"
-        :grid-visible="gridVisible"
-        :amplitude-scale="amplitudeScale"
-        :background-color="'#07131f'"
+      <section
+        v-if="hasLeftPanel"
+        class="ventilator-workspace__panel"
+      >
+        <slot
+          name="left-panel"
+          :frame="normalizedFrame"
+        />
+      </section>
+
+      <div class="ventilator-workspace__main">
+        <div
+          v-if="normalizedFrame.waveforms.length"
+          class="ventilator-workspace__wave-grid"
+        >
+          <MonitorWaveformCard
+            v-for="waveform in normalizedFrame.waveforms"
+            :key="waveform.id"
+            :channel="waveform"
+            :paused="paused"
+            :time-window="timeWindow"
+            :grid-visible="gridVisible"
+            :amplitude-scale="amplitudeScale"
+            :background-color="'#07131f'"
+          />
+        </div>
+
+        <div
+          v-if="normalizedFrame.loops.length"
+          class="ventilator-workspace__loop-grid"
+        >
+          <VentilatorLoopChart
+            v-for="loop in normalizedFrame.loops"
+            :key="loop.id"
+            :loop="loop"
+          />
+        </div>
+
+        <div
+          v-if="!normalizedFrame.waveforms.length && !normalizedFrame.loops.length"
+          class="ventilator-workspace__empty"
+        >
+          暂无呼吸机波形数据。
+        </div>
+      </div>
+
+      <section
+        v-if="hasAlarmPanel"
+        class="ventilator-workspace__panel"
+      >
+        <slot
+          name="alarm-panel"
+          :frame="normalizedFrame"
+        />
+      </section>
+    </div>
+
+    <section
+      v-if="hasBottomPanel"
+      class="ventilator-workspace__bottom-panel"
+    >
+      <slot
+        name="bottom-panel"
+        :frame="normalizedFrame"
       />
-    </div>
-
-    <div
-      v-if="normalizedFrame.loops.length"
-      class="ventilator-workspace__loop-grid"
-    >
-      <VentilatorLoopChart
-        v-for="loop in normalizedFrame.loops"
-        :key="loop.id"
-        :loop="loop"
-      />
-    </div>
-
-    <div
-      v-if="!normalizedFrame.waveforms.length && !normalizedFrame.loops.length"
-      class="ventilator-workspace__empty"
-    >
-      暂无呼吸机波形数据。
-    </div>
+    </section>
   </section>
 </template>
 
@@ -156,6 +229,13 @@ defineExpose({
     flex-wrap: wrap;
   }
 
+  &__header-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
   &__title {
     margin: 0;
     color: #0f172a;
@@ -165,7 +245,7 @@ defineExpose({
 
   &__description {
     margin: 10px 0 0;
-    max-width: 720px;
+    max-width: 760px;
     color: #475569;
     font-size: 14px;
     line-height: 1.7;
@@ -188,6 +268,11 @@ defineExpose({
     font-size: 12px;
   }
 
+  &__device-actions {
+    width: 100%;
+    min-width: 0;
+  }
+
   &__status {
     display: flex;
     align-items: center;
@@ -195,6 +280,32 @@ defineExpose({
     flex-wrap: wrap;
     color: #64748b;
     font-size: 12px;
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+
+    &--with-left {
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    &--with-alarm {
+      grid-template-columns: minmax(0, 1fr) 280px;
+    }
+
+    &--with-both {
+      grid-template-columns: 280px minmax(0, 1fr) 280px;
+    }
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
   }
 
   &__wave-grid {
@@ -209,6 +320,18 @@ defineExpose({
     gap: 16px;
   }
 
+  &__panel,
+  &__bottom-panel {
+    min-width: 0;
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
   &__empty {
     padding: 48px 24px;
     border: 1px dashed rgba(148, 163, 184, 0.34);
@@ -217,6 +340,17 @@ defineExpose({
     color: #64748b;
     font-size: 14px;
     text-align: center;
+  }
+}
+
+@media (max-width: 1320px) {
+  .ventilator-workspace {
+    &__body,
+    &__body--with-left,
+    &__body--with-alarm,
+    &__body--with-both {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 }
 
@@ -231,6 +365,10 @@ defineExpose({
 
 @media (max-width: 720px) {
   .ventilator-workspace {
+    &__header-side {
+      align-items: stretch;
+    }
+
     &__wave-grid,
     &__loop-grid {
       grid-template-columns: minmax(0, 1fr);

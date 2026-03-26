@@ -134,10 +134,93 @@ function createChannelChunk(channel, signal, startTime, frameDuration) {
   return values;
 }
 
+function formatTimeline(seconds) {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const remainSeconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${remainSeconds}`;
+}
+
+function roundValue(value, digits = 0) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function createMonitorVitals(signal, time) {
+  const meanPressure = signal.meanPressure || 80;
+  const pulsePressure = signal.pulsePressure || 30;
+  const sys = meanPressure + pulsePressure * 0.72 + Math.sin(time * 0.3) * 2.4;
+  const dia = meanPressure - pulsePressure * 0.44 + Math.cos(time * 0.28) * 1.8;
+
+  return {
+    HR: Math.round((signal.heartRate || 72) + Math.sin(time * 0.55) * 3),
+    RR: Math.round((signal.respRate || 16) + Math.cos(time * 0.35) * 1.4),
+    SpO2: Math.min(100, Math.max(90, Math.round(97 + Math.sin(time * 0.18) * 1.2))),
+    MAP: Math.round(meanPressure + Math.sin(time * 0.24) * 3),
+    SYS: Math.round(sys),
+    DIA: Math.round(dia),
+    ETCO2: Math.round((signal.co2Level || 35) + Math.sin(time * 0.32) * 1.1),
+    CVP: signal.cvpBaseline
+      ? roundValue(signal.cvpBaseline + Math.sin(time * 0.25) * 0.6, 1)
+      : undefined,
+  };
+}
+
+function createNibpHistory(signal, elapsedSeconds) {
+  const recordCount = Math.min(5, Math.max(1, Math.floor(elapsedSeconds / 12) + 1));
+  const list = [];
+
+  for (let index = 0; index < recordCount; index += 1) {
+    const secondsAgo = Math.max(0, elapsedSeconds - (recordCount - 1 - index) * 12);
+    const wobble = Math.sin(secondsAgo * 0.16 + index) * 2.5;
+    const mean = (signal.meanPressure || 82) + wobble;
+    const pulse = (signal.pulsePressure || 30) + Math.cos(secondsAgo * 0.18 + index) * 2;
+    const sys = mean + pulse * 0.72;
+    const dia = mean - pulse * 0.44;
+
+    list.push({
+      id: `nibp-${index}`,
+      time: formatTimeline(secondsAgo),
+      raw_text: `${Math.round(sys)}/${Math.round(dia)}(${Math.round(mean)}) mmHg`,
+    });
+  }
+
+  return list;
+}
+
+function createMonitorWarnings(scenario, vitals, elapsedSeconds) {
+  const warnings = [];
+
+  if (scenario.key === "afib_fast") {
+    warnings.push({
+      id: "afib-rate",
+      level: "warning",
+      title: "节律提示",
+      text: `心率偏快，当前 ${vitals.HR} bpm`,
+      time: formatTimeline(elapsedSeconds),
+    });
+  }
+
+  if (scenario.key === "invasive_support") {
+    warnings.push({
+      id: "art-line",
+      level: "info",
+      title: "有创压通道",
+      text: "动脉压通道处于实时刷新状态",
+      time: formatTimeline(elapsedSeconds),
+    });
+  }
+
+  return warnings;
+}
+
 export function useMockMonitorStream(options = {}) {
   const payload = ref({
     source: "mock",
     waveforms: [],
+    vitals: {},
+    warning: [],
+    nibp_history: [],
     timestamp: Date.now(),
     scenarioKey: "stable_sinus",
     scenarioLabel: "稳定窦律监护",
@@ -163,6 +246,9 @@ export function useMockMonitorStream(options = {}) {
 
     elapsedSeconds += frameDuration;
     tickCount.value += 1;
+
+    const vitals = createMonitorVitals(scenario.signal, elapsedSeconds);
+
     payload.value = {
       source: "mock",
       timestamp: Date.now(),
@@ -170,6 +256,9 @@ export function useMockMonitorStream(options = {}) {
       scenarioLabel: scenario.label,
       monitorLabel: scenario.monitorLabel,
       description: scenario.description,
+      vitals,
+      warning: createMonitorWarnings(scenario, vitals, elapsedSeconds),
+      nibp_history: createNibpHistory(scenario.signal, elapsedSeconds),
       waveforms: scenario.channels.map((channel) => ({
         code: channel.code,
         label: channel.label,
@@ -178,7 +267,9 @@ export function useMockMonitorStream(options = {}) {
         samplingRate: channel.samplingRate,
         lowerLimit: channel.lowerLimit,
         upperLimit: channel.upperLimit,
-        autoRange: true,
+        autoRange: channel.autoRange ?? true,
+        renderMode: channel.renderMode || "scroll",
+        fillArea: channel.fillArea ?? true,
         y: createChannelChunk(channel, scenario.signal, frameStart, frameDuration),
       })),
     };

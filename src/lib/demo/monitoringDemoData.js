@@ -2,7 +2,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
   stable_sinus: {
     key: "stable_sinus",
     label: "稳定窦律监护",
-    description: "模拟常规床旁监护，包含 ECG、RESP、PLETH 与有创动脉压。",
+    description:
+      "模拟常规床旁监护，包含 ECG、RESP、PLETH 与有创动脉压波形。",
     monitorLabel: "通用监护仪",
     channels: [
       {
@@ -14,6 +15,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -1.8,
         upperLimit: 2.2,
         kind: "ecg",
+        renderMode: "scroll",
+        fillArea: true,
       },
       {
         code: "RESP",
@@ -24,6 +27,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -1.4,
         upperLimit: 1.4,
         kind: "resp",
+        renderMode: "scroll",
+        fillArea: false,
       },
       {
         code: "PLETH",
@@ -34,6 +39,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -0.2,
         upperLimit: 1.8,
         kind: "pleth",
+        renderMode: "scroll",
+        fillArea: true,
       },
       {
         code: "ART",
@@ -44,6 +51,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: 20,
         upperLimit: 160,
         kind: "art",
+        renderMode: "scroll",
+        fillArea: true,
       },
     ],
     signal: {
@@ -59,7 +68,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
   afib_fast: {
     key: "afib_fast",
     label: "快速房颤监护",
-    description: "强调心率不齐与脉搏振幅波动，适合验证实时波形滚动与自适应量程。",
+    description:
+      "强调心率不齐与脉搏振幅波动，用于验证实时波形滚动与自适应量程。",
     monitorLabel: "心电监护仪",
     channels: [
       {
@@ -71,6 +81,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -2.2,
         upperLimit: 2.4,
         kind: "ecg",
+        renderMode: "scroll",
+        fillArea: true,
       },
       {
         code: "RESP",
@@ -81,6 +93,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -1.5,
         upperLimit: 1.5,
         kind: "resp",
+        renderMode: "scroll",
+        fillArea: false,
       },
       {
         code: "PLETH",
@@ -91,6 +105,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -0.2,
         upperLimit: 1.8,
         kind: "pleth",
+        renderMode: "scroll",
+        fillArea: true,
       },
       {
         code: "CO2",
@@ -101,6 +117,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -2,
         upperLimit: 55,
         kind: "co2",
+        renderMode: "scroll",
+        fillArea: false,
       },
     ],
     signal: {
@@ -116,7 +134,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
   invasive_support: {
     key: "invasive_support",
     label: "循环支持监护",
-    description: "加入 CVP 与动脉压力变化，用于 ICU 侵入式监护波形演示。",
+    description:
+      "加入 CVP 与动脉压变化，用于 ICU 侵入式监护波形演示。",
     monitorLabel: "ICU 监护终端",
     channels: [
       {
@@ -128,6 +147,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -2,
         upperLimit: 2.4,
         kind: "ecg",
+        renderMode: "scroll",
+        fillArea: true,
       },
       {
         code: "RESP",
@@ -138,6 +159,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: -1.3,
         upperLimit: 1.3,
         kind: "resp",
+        renderMode: "scroll",
+        fillArea: false,
       },
       {
         code: "ART",
@@ -148,6 +171,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: 15,
         upperLimit: 170,
         kind: "art",
+        renderMode: "scroll",
+        fillArea: true,
       },
       {
         code: "CVP",
@@ -158,6 +183,8 @@ const MONITOR_SCENARIO_CATALOG = Object.freeze({
         lowerLimit: 0,
         upperLimit: 22,
         kind: "cvp",
+        renderMode: "scroll",
+        fillArea: true,
       },
     ],
     signal: {
@@ -177,7 +204,8 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
   ac_volume: {
     key: "ac_volume",
     label: "容量控制通气",
-    description: "典型的 VCV 波形，带压力、流速、容量三联波形与环图。",
+    description:
+      "典型 VCV 波形，包含压力、流速、容量三联波形与经典环图。",
     ventilatorLabel: "呼吸机",
     waveforms: [
       {
@@ -188,6 +216,9 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: 0,
         upperLimit: 35,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
       {
         code: "FLOW",
@@ -197,6 +228,9 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: -55,
         upperLimit: 60,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
       {
         code: "VOLUME",
@@ -206,12 +240,33 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: 0,
         upperLimit: 650,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
     ],
     loops: [
-      { key: "Paw-V", label: "压力-容量环", xUnit: "mL", yUnit: "cmH2O", color: "#4f7cff" },
-      { key: "Flow-Paw", label: "流速-压力环", xUnit: "L/min", yUnit: "cmH2O", color: "#22c55e" },
-      { key: "V-Flow", label: "容量-流速环", xUnit: "mL", yUnit: "L/min", color: "#f97316" },
+      {
+        key: "Paw-V",
+        label: "压力-容量环",
+        xUnit: "mL",
+        yUnit: "cmH2O",
+        color: "#4f7cff",
+      },
+      {
+        key: "Flow-Paw",
+        label: "流速-压力环",
+        xUnit: "L/min",
+        yUnit: "cmH2O",
+        color: "#22c55e",
+      },
+      {
+        key: "V-Flow",
+        label: "容量-流速环",
+        xUnit: "mL",
+        yUnit: "L/min",
+        color: "#f97316",
+      },
     ],
     signal: {
       rate: 14,
@@ -227,7 +282,8 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
   pressure_control: {
     key: "pressure_control",
     label: "压力控制通气",
-    description: "强调压力平台与减速流速波形，适合验证呼吸机工作区布局。",
+    description:
+      "强调压力平台与减速流速波形，适合验证呼吸机工作区布局。",
     ventilatorLabel: "呼吸机",
     waveforms: [
       {
@@ -238,6 +294,9 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: 0,
         upperLimit: 40,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
       {
         code: "FLOW",
@@ -247,6 +306,9 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: -60,
         upperLimit: 65,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
       {
         code: "VOLUME",
@@ -256,12 +318,33 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: 0,
         upperLimit: 720,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
     ],
     loops: [
-      { key: "Paw-V", label: "压力-容量环", xUnit: "mL", yUnit: "cmH2O", color: "#4f7cff" },
-      { key: "Flow-Paw", label: "流速-压力环", xUnit: "L/min", yUnit: "cmH2O", color: "#22c55e" },
-      { key: "V-Flow", label: "容量-流速环", xUnit: "mL", yUnit: "L/min", color: "#f97316" },
+      {
+        key: "Paw-V",
+        label: "压力-容量环",
+        xUnit: "mL",
+        yUnit: "cmH2O",
+        color: "#4f7cff",
+      },
+      {
+        key: "Flow-Paw",
+        label: "流速-压力环",
+        xUnit: "L/min",
+        yUnit: "cmH2O",
+        color: "#22c55e",
+      },
+      {
+        key: "V-Flow",
+        label: "容量-流速环",
+        xUnit: "mL",
+        yUnit: "L/min",
+        color: "#f97316",
+      },
     ],
     signal: {
       rate: 18,
@@ -277,7 +360,8 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
   weaning_trial: {
     key: "weaning_trial",
     label: "撤机评估",
-    description: "模拟自主呼吸增强阶段，便于观察流速与环图变化。",
+    description:
+      "模拟自主呼吸增强阶段，便于观察流速与环图变化。",
     ventilatorLabel: "呼吸机",
     waveforms: [
       {
@@ -288,6 +372,9 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: 0,
         upperLimit: 28,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
       {
         code: "FLOW",
@@ -297,6 +384,9 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: -50,
         upperLimit: 52,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
       {
         code: "VOLUME",
@@ -306,12 +396,33 @@ const VENTILATOR_SCENARIO_CATALOG = Object.freeze({
         samplingRate: 80,
         lowerLimit: 0,
         upperLimit: 520,
+        renderMode: "sweep",
+        fillArea: false,
+        autoRange: false,
       },
     ],
     loops: [
-      { key: "Paw-V", label: "压力-容量环", xUnit: "mL", yUnit: "cmH2O", color: "#4f7cff" },
-      { key: "Flow-Paw", label: "流速-压力环", xUnit: "L/min", yUnit: "cmH2O", color: "#22c55e" },
-      { key: "V-Flow", label: "容量-流速环", xUnit: "mL", yUnit: "L/min", color: "#f97316" },
+      {
+        key: "Paw-V",
+        label: "压力-容量环",
+        xUnit: "mL",
+        yUnit: "cmH2O",
+        color: "#4f7cff",
+      },
+      {
+        key: "Flow-Paw",
+        label: "流速-压力环",
+        xUnit: "L/min",
+        yUnit: "cmH2O",
+        color: "#22c55e",
+      },
+      {
+        key: "V-Flow",
+        label: "容量-流速环",
+        xUnit: "mL",
+        yUnit: "L/min",
+        color: "#f97316",
+      },
     ],
     signal: {
       rate: 22,

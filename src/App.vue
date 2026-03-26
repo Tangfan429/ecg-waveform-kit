@@ -12,21 +12,21 @@ import {
   demoVectorEcg,
 } from "./lib/demo/demoData";
 
-const surfaceMode = ref("monitoring");
+const surfaceMode = ref("diagnosis");
 const examMode = ref("standard_ecg");
 const analysisType = ref("waveform");
 const monitoringMode = ref("monitor");
 
 const surfaceOptions = Object.freeze([
   {
-    value: "monitoring",
-    label: "监护波形",
-    description: "ICU 监护仪与呼吸机波形，使用 mock stream 模拟实时数据。",
-  },
-  {
     value: "diagnosis",
     label: "诊断波形",
     description: "现有十二导联诊断中心演示入口。",
+  },
+  {
+    value: "monitoring",
+    label: "监护波形",
+    description: "ICU 监护仪与呼吸机波形，使用 mock stream 模拟实时数据。",
   },
 ]);
 

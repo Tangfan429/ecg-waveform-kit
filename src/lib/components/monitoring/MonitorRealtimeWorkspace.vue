@@ -1,5 +1,5 @@
 <script setup>
-import { computed, useTemplateRef } from "vue";
+import { computed, useSlots, useTemplateRef } from "vue";
 import { normalizeMonitorPayload } from "../../adapters/normalizeMonitorPayload";
 import { useMockMonitorStream } from "../../composables/useMockMonitorStream";
 import { printMonitoringDocument } from "../../utils/monitoringPrint";
@@ -44,6 +44,7 @@ const props = defineProps({
   },
 });
 
+const slots = useSlots();
 const workspaceRef = useTemplateRef("workspaceRef");
 
 const { payload: mockPayload, tickCount } = useMockMonitorStream({
@@ -58,11 +59,15 @@ const normalizedFrame = computed(() =>
 );
 
 const sourceLabel = computed(() =>
-  normalizedFrame.value.source === "mock" ? "Mock Stream" : "External Payload",
+  normalizedFrame.value.source === "mock" ? "Mock 数据流" : "外部数据",
 );
 const updateText = computed(() =>
   new Date(normalizedFrame.value.timestamp || Date.now()).toLocaleTimeString(),
 );
+const hasSidePanels = computed(
+  () => Boolean(slots["right-panel"]) || Boolean(slots["alarm-panel"]),
+);
+const hasBottomPanel = computed(() => Boolean(slots["bottom-panel"]));
 
 const printWorkspace = () =>
   printMonitoringDocument({
@@ -85,7 +90,10 @@ defineExpose({
       <div>
         <h2 class="monitor-workspace__title">{{ title }}</h2>
         <p class="monitor-workspace__description">
-          {{ normalizedFrame.description || "面向 ICU 监护仪波形的 mock 实时演示，仅保留波形渲染能力。" }}
+          {{
+            normalizedFrame.description ||
+              "面向 ICU 监护仪波形的通用工作区，保留实时波形、打印与工具栏能力，并通过插槽承接 vitals、NIBP 与报警扩展。"
+          }}
         </p>
       </div>
 
@@ -102,29 +110,73 @@ defineExpose({
       <span>时间窗 {{ timeWindow }}s</span>
       <span>垂直缩放 {{ amplitudeScale.toFixed(2) }}x</span>
       <span>{{ paused ? "已暂停" : "实时中" }}</span>
+      <span v-if="normalizedFrame.warning.length">报警 {{ normalizedFrame.warning.length }}</span>
+      <span v-if="normalizedFrame.nibpHistory.length">NIBP {{ normalizedFrame.nibpHistory.length }} 条</span>
     </div>
 
     <div
-      v-if="normalizedFrame.channels.length"
-      class="monitor-workspace__grid"
+      class="monitor-workspace__body"
+      :class="{ 'monitor-workspace__body--with-side': hasSidePanels }"
     >
-      <MonitorWaveformCard
-        v-for="channel in normalizedFrame.channels"
-        :key="channel.id"
-        :channel="channel"
-        :paused="paused"
-        :time-window="timeWindow"
-        :grid-visible="gridVisible"
-        :amplitude-scale="amplitudeScale"
+      <div class="monitor-workspace__main">
+        <div
+          v-if="normalizedFrame.channels.length"
+          class="monitor-workspace__grid"
+        >
+          <MonitorWaveformCard
+            v-for="channel in normalizedFrame.channels"
+            :key="channel.id"
+            :channel="channel"
+            :paused="paused"
+            :time-window="timeWindow"
+            :grid-visible="gridVisible"
+            :amplitude-scale="amplitudeScale"
+          />
+        </div>
+
+        <div
+          v-else
+          class="monitor-workspace__empty"
+        >
+          暂无监护仪波形数据。
+        </div>
+      </div>
+
+      <div
+        v-if="hasSidePanels"
+        class="monitor-workspace__sidebars"
+      >
+        <section
+          v-if="$slots['right-panel']"
+          class="monitor-workspace__panel"
+        >
+          <slot
+            name="right-panel"
+            :frame="normalizedFrame"
+          />
+        </section>
+
+        <section
+          v-if="$slots['alarm-panel']"
+          class="monitor-workspace__panel"
+        >
+          <slot
+            name="alarm-panel"
+            :frame="normalizedFrame"
+          />
+        </section>
+      </div>
+    </div>
+
+    <section
+      v-if="hasBottomPanel"
+      class="monitor-workspace__bottom-panel"
+    >
+      <slot
+        name="bottom-panel"
+        :frame="normalizedFrame"
       />
-    </div>
-
-    <div
-      v-else
-      class="monitor-workspace__empty"
-    >
-      暂无监护仪波形数据。
-    </div>
+    </section>
   </section>
 </template>
 
@@ -152,7 +204,7 @@ defineExpose({
 
   &__description {
     margin: 10px 0 0;
-    max-width: 720px;
+    max-width: 760px;
     color: #475569;
     font-size: 14px;
     line-height: 1.7;
@@ -184,10 +236,44 @@ defineExpose({
     font-size: 12px;
   }
 
+  &__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+
+    &--with-side {
+      grid-template-columns: minmax(0, 1fr) 300px;
+    }
+  }
+
+  &__main {
+    min-width: 0;
+  }
+
   &__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+  }
+
+  &__sidebars {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  &__panel,
+  &__bottom-panel {
+    min-width: 0;
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
   }
 
   &__empty {
@@ -198,6 +284,15 @@ defineExpose({
     color: #64748b;
     font-size: 14px;
     text-align: center;
+  }
+}
+
+@media (max-width: 1180px) {
+  .monitor-workspace {
+    &__body,
+    &__body--with-side {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 }
 

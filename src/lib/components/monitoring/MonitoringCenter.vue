@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useTemplateRef } from "vue";
+import { computed, ref, useSlots, useTemplateRef } from "vue";
 import { useWaveformViewport } from "../../composables/useWaveformViewport";
 import {
   monitorScenarioOptions,
@@ -38,10 +38,11 @@ const props = defineProps({
   subtitle: {
     type: String,
     default:
-      "从 ICU 心电监护模块抽离的通用波形能力，当前使用 mock stream 模拟 WebSocket 实时数据。",
+      "从 ICU 监护模块抽离出的通用波形能力区，当前使用 mock stream 模拟实时数据，并支持后续通过 adapter 接入真实 WebSocket。",
   },
 });
 
+const slots = useSlots();
 const workspaceRef = useTemplateRef("workspaceRef");
 const viewportRef = useTemplateRef("viewportRef");
 
@@ -93,6 +94,16 @@ const modeOptions = Object.freeze([
   { value: "ventilator", label: "呼吸机波形" },
 ]);
 
+const hasMonitorRightPanel = computed(() => Boolean(slots["monitor-right-panel"]));
+const hasMonitorBottomPanel = computed(() => Boolean(slots["monitor-bottom-panel"]));
+const hasMonitorAlarmPanel = computed(() => Boolean(slots["monitor-alarm-panel"]));
+const hasVentilatorLeftPanel = computed(() => Boolean(slots["ventilator-left-panel"]));
+const hasVentilatorBottomPanel = computed(() => Boolean(slots["ventilator-bottom-panel"]));
+const hasVentilatorAlarmPanel = computed(() => Boolean(slots["ventilator-alarm-panel"]));
+const hasVentilatorDeviceActions = computed(() =>
+  Boolean(slots["ventilator-device-actions"]),
+);
+
 const handlePrint = () => {
   workspaceRef.value?.printWorkspace?.();
 };
@@ -128,7 +139,7 @@ const handlePrint = () => {
     </header>
 
     <div class="monitoring-center__note">
-      已剥离病人切换、设备绑定、报警列表与 ICU 页面业务编排，只保留波形、环图、打印、全屏与工具栏能力。
+      已剥离病人切换、设备绑定和会诊审核等业务逻辑，当前保留波形、环图、打印、全屏与工具栏能力，并为 ICU 右侧指标、报警及底部扩展面板预留插槽。
     </div>
 
     <MonitoringToolbar
@@ -166,7 +177,37 @@ const handlePrint = () => {
           :time-window="timeWindow"
           :grid-visible="gridVisible"
           :amplitude-scale="amplitudeScale"
-        />
+        >
+          <template
+            v-if="hasMonitorRightPanel"
+            #right-panel="slotProps"
+          >
+            <slot
+              name="monitor-right-panel"
+              v-bind="slotProps"
+            />
+          </template>
+
+          <template
+            v-if="hasMonitorBottomPanel"
+            #bottom-panel="slotProps"
+          >
+            <slot
+              name="monitor-bottom-panel"
+              v-bind="slotProps"
+            />
+          </template>
+
+          <template
+            v-if="hasMonitorAlarmPanel"
+            #alarm-panel="slotProps"
+          >
+            <slot
+              name="monitor-alarm-panel"
+              v-bind="slotProps"
+            />
+          </template>
+        </MonitorRealtimeWorkspace>
 
         <VentilatorRealtimeWorkspace
           v-else
@@ -178,7 +219,47 @@ const handlePrint = () => {
           :time-window="timeWindow"
           :grid-visible="gridVisible"
           :amplitude-scale="amplitudeScale"
-        />
+        >
+          <template
+            v-if="hasVentilatorLeftPanel"
+            #left-panel="slotProps"
+          >
+            <slot
+              name="ventilator-left-panel"
+              v-bind="slotProps"
+            />
+          </template>
+
+          <template
+            v-if="hasVentilatorBottomPanel"
+            #bottom-panel="slotProps"
+          >
+            <slot
+              name="ventilator-bottom-panel"
+              v-bind="slotProps"
+            />
+          </template>
+
+          <template
+            v-if="hasVentilatorAlarmPanel"
+            #alarm-panel="slotProps"
+          >
+            <slot
+              name="ventilator-alarm-panel"
+              v-bind="slotProps"
+            />
+          </template>
+
+          <template
+            v-if="hasVentilatorDeviceActions"
+            #device-actions="slotProps"
+          >
+            <slot
+              name="ventilator-device-actions"
+              v-bind="slotProps"
+            />
+          </template>
+        </VentilatorRealtimeWorkspace>
       </div>
     </div>
   </section>
