@@ -111,7 +111,9 @@ const availableLeadModeOptions = computed(() =>
     ? DIAGNOSIS_LEAD_MODE_OPTIONS.filter(
         (option) => option.value === LEAD_MODE_LEAD_I,
       )
-    : DIAGNOSIS_LEAD_MODE_OPTIONS,
+    : DIAGNOSIS_LEAD_MODE_OPTIONS.filter(
+        (option) => option.value === LEAD_MODE_STANDARD,
+      ),
 );
 const availableExamModeOptions = computed(() =>
   isWatchApiSource.value
