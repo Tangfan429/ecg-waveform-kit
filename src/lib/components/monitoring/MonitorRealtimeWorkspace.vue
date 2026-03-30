@@ -57,6 +57,14 @@ const normalizedFrame = computed(() =>
     props.payload || (props.useMock ? mockPayload.value : null) || {},
   ),
 );
+const displayFrame = computed(() => ({
+  ...normalizedFrame.value,
+  channels: (normalizedFrame.value.channels || []).map((channel) => ({
+    ...channel,
+    // 监护仪统一切换为扫屏模式，以贴近 ICU 页面中的连续扫描体验。
+    renderMode: "sweep",
+  })),
+}));
 
 const sourceLabel = computed(() =>
   normalizedFrame.value.source === "mock" ? "Mock 数据流" : "外部数据",
@@ -64,15 +72,12 @@ const sourceLabel = computed(() =>
 const updateText = computed(() =>
   new Date(normalizedFrame.value.timestamp || Date.now()).toLocaleTimeString(),
 );
-const hasSidePanels = computed(
-  () => Boolean(slots["right-panel"]) || Boolean(slots["alarm-panel"]),
-);
 const hasBottomPanel = computed(() => Boolean(slots["bottom-panel"]));
 
 const printWorkspace = () =>
   printMonitoringDocument({
     title: props.title,
-    subtitle: `${normalizedFrame.value.scenarioLabel || "监护波形"} · ${sourceLabel.value} · ${updateText.value}`,
+    subtitle: `${normalizedFrame.value.scenarioLabel || "监护仪波形"} · ${sourceLabel.value} · ${updateText.value}`,
     html: workspaceRef.value?.outerHTML || "",
   });
 
@@ -90,81 +95,65 @@ defineExpose({
       <div>
         <h2 class="monitor-workspace__title">{{ title }}</h2>
         <p class="monitor-workspace__description">
-          {{
-            normalizedFrame.description ||
-              "面向 ICU 监护仪波形的通用工作区，保留实时波形、打印与工具栏能力，并通过插槽承接 vitals、NIBP 与报警扩展。"
-          }}
+          监护仪模式保留 ecg-web 的通用容器结构，但将波形区切换为更接近 ICU 设备的连续扫屏条带展示。
         </p>
       </div>
 
-      <div class="monitor-workspace__chips">
-        <span class="monitor-workspace__chip">{{ normalizedFrame.monitorLabel || "监护设备" }}</span>
-        <span class="monitor-workspace__chip">{{ normalizedFrame.scenarioLabel || "监护场景" }}</span>
-        <span class="monitor-workspace__chip">{{ sourceLabel }}</span>
-        <span class="monitor-workspace__chip">Tick {{ tickCount }}</span>
+      <div class="monitor-workspace__summary-group">
+        <div class="monitor-workspace__summary-card">
+          <span class="monitor-workspace__summary-label">场景</span>
+          <strong class="monitor-workspace__summary-value">
+            {{ displayFrame.scenarioLabel || "监护场景" }}
+          </strong>
+        </div>
+        <div class="monitor-workspace__summary-card">
+          <span class="monitor-workspace__summary-label">数据源</span>
+          <strong class="monitor-workspace__summary-value">{{ sourceLabel }}</strong>
+        </div>
+        <div class="monitor-workspace__summary-card">
+          <span class="monitor-workspace__summary-label">刷新</span>
+          <strong class="monitor-workspace__summary-value">{{ updateText }}</strong>
+        </div>
       </div>
     </header>
 
-    <div class="monitor-workspace__status">
-      <span>更新时间 {{ updateText }}</span>
+    <div class="monitor-workspace__status-bar">
       <span>时间窗 {{ timeWindow }}s</span>
       <span>垂直缩放 {{ amplitudeScale.toFixed(2) }}x</span>
-      <span>{{ paused ? "已暂停" : "实时中" }}</span>
-      <span v-if="normalizedFrame.warning.length">报警 {{ normalizedFrame.warning.length }}</span>
-      <span v-if="normalizedFrame.nibpHistory.length">NIBP {{ normalizedFrame.nibpHistory.length }} 条</span>
+      <span>{{ paused ? "已暂停" : "实时扫屏" }}</span>
+      <span>通道 {{ displayFrame.channels.length }}</span>
+      <span>Tick {{ tickCount }}</span>
+      <span v-if="displayFrame.warning.length">报警 {{ displayFrame.warning.length }}</span>
+      <span v-if="displayFrame.nibpHistory.length">NIBP {{ displayFrame.nibpHistory.length }} 条</span>
     </div>
 
-    <div
-      class="monitor-workspace__body"
-      :class="{ 'monitor-workspace__body--with-side': hasSidePanels }"
-    >
-      <div class="monitor-workspace__main">
-        <div
-          v-if="normalizedFrame.channels.length"
-          class="monitor-workspace__grid"
-        >
-          <MonitorWaveformCard
-            v-for="channel in normalizedFrame.channels"
-            :key="channel.id"
-            :channel="channel"
-            :paused="paused"
-            :time-window="timeWindow"
-            :grid-visible="gridVisible"
-            :amplitude-scale="amplitudeScale"
-          />
-        </div>
-
-        <div
-          v-else
-          class="monitor-workspace__empty"
-        >
-          暂无监护仪波形数据。
-        </div>
+    <div class="monitor-workspace__board">
+      <div
+        v-if="displayFrame.channels.length"
+        class="monitor-workspace__track-list"
+      >
+        <MonitorWaveformCard
+          v-for="(channel, index) in displayFrame.channels"
+          :key="channel.id"
+          :channel="channel"
+          :paused="paused"
+          :time-window="timeWindow"
+          :grid-visible="gridVisible"
+          :amplitude-scale="amplitudeScale"
+          :canvas-height="index === displayFrame.channels.length - 1 ? 150 : 132"
+          :show-x-axis-labels="index === displayFrame.channels.length - 1"
+          shell-variant="strip"
+          surface-tone="light"
+          background-color="#ffffff"
+          :meta-column-width="132"
+        />
       </div>
 
       <div
-        v-if="hasSidePanels"
-        class="monitor-workspace__sidebars"
+        v-else
+        class="monitor-workspace__empty"
       >
-        <section
-          v-if="$slots['right-panel']"
-          class="monitor-workspace__panel"
-        >
-          <slot
-            name="right-panel"
-            :frame="normalizedFrame"
-          />
-        </section>
-
-        <section
-          v-if="$slots['alarm-panel']"
-          class="monitor-workspace__panel"
-        >
-          <slot
-            name="alarm-panel"
-            :frame="normalizedFrame"
-          />
-        </section>
+        暂无监护仪波形数据。
       </div>
     </div>
 
@@ -174,7 +163,7 @@ defineExpose({
     >
       <slot
         name="bottom-panel"
-        :frame="normalizedFrame"
+        :frame="displayFrame"
       />
     </section>
   </section>
@@ -198,88 +187,87 @@ defineExpose({
   &__title {
     margin: 0;
     color: #0f172a;
-    font-size: 22px;
-    line-height: 1.05;
+    font-size: 24px;
+    line-height: 1.02;
   }
 
   &__description {
     margin: 10px 0 0;
     max-width: 760px;
-    color: #475569;
+    color: #64748b;
     font-size: 14px;
     line-height: 1.7;
   }
 
-  &__chips {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  &__chip {
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.78);
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    color: #334155;
-    font-size: 12px;
-  }
-
-  &__status {
-    display: flex;
-    align-items: center;
+  &__summary-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(132px, 1fr));
     gap: 12px;
-    flex-wrap: wrap;
+    width: min(100%, 480px);
+  }
+
+  &__summary-card {
+    padding: 14px 16px;
+    border: 1px solid rgba(203, 213, 225, 0.88);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.84);
+  }
+
+  &__summary-label {
+    display: block;
     color: #64748b;
     font-size: 12px;
   }
 
-  &__body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    align-items: start;
+  &__summary-value {
+    display: block;
+    margin-top: 7px;
+    color: #0f172a;
+    font-size: 14px;
+    line-height: 1.4;
+  }
 
-    &--with-side {
-      grid-template-columns: minmax(0, 1fr) 300px;
+  &__status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    span {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      background: rgba(255, 255, 255, 0.78);
+      color: #475569;
+      font-size: 12px;
+      line-height: 1;
     }
   }
 
-  &__main {
-    min-width: 0;
+  &__board {
+    padding: 14px;
+    border: 1px solid rgba(203, 213, 225, 0.86);
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.98) 100%);
   }
 
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
-
-  &__sidebars {
+  &__track-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    min-width: 0;
+    gap: 10px;
   }
 
-  &__panel,
   &__bottom-panel {
-    min-width: 0;
     padding: 16px;
     border-radius: 22px;
     border: 1px solid rgba(148, 163, 184, 0.18);
     background: rgba(255, 255, 255, 0.72);
-    box-shadow:
-      0 14px 30px rgba(15, 23, 42, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.72);
   }
 
   &__empty {
-    padding: 48px 24px;
+    padding: 56px 24px;
     border: 1px dashed rgba(148, 163, 184, 0.34);
-    border-radius: 22px;
+    border-radius: 18px;
     background: rgba(248, 250, 252, 0.72);
     color: #64748b;
     font-size: 14px;
@@ -287,19 +275,23 @@ defineExpose({
   }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1080px) {
   .monitor-workspace {
-    &__body,
-    &__body--with-side {
-      grid-template-columns: minmax(0, 1fr);
+    &__summary-group {
+      grid-template-columns: repeat(2, minmax(132px, 1fr));
+      width: 100%;
     }
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 720px) {
   .monitor-workspace {
-    &__grid {
+    &__summary-group {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    &__board {
+      padding: 10px;
     }
   }
 }

@@ -29,6 +29,10 @@ const props = defineProps({
     type: Number,
     default: 8,
   },
+  paused: {
+    type: Boolean,
+    default: false,
+  },
   lineColor: {
     type: String,
     default: "#4f7cff",
@@ -36,6 +40,10 @@ const props = defineProps({
   backgroundColor: {
     type: String,
     default: "#081226",
+  },
+  surfaceTone: {
+    type: String,
+    default: "dark",
   },
   gridVisible: {
     type: Boolean,
@@ -93,6 +101,56 @@ const stageWidth = shallowRef(640);
 
 let resizeObserver = null;
 let animationFrameId = 0;
+let lastSweepFrameAt = 0;
+
+const sweepCurrentSegment = shallowRef([]);
+const sweepNextSegment = shallowRef([]);
+const sweepQueuedSegment = shallowRef([]);
+const sweepRevealX = shallowRef(0);
+
+const resolvedSurfaceTone = computed(() =>
+  props.surfaceTone === "light" ? "light" : "dark",
+);
+const resolvedBackgroundColor = computed(() => {
+  if (String(props.backgroundColor || "").trim()) {
+    return props.backgroundColor;
+  }
+
+  return resolvedSurfaceTone.value === "light" ? "#ffffff" : "#081226";
+});
+const stageClasses = computed(() => [
+  "streaming-waveform-canvas__stage",
+  `streaming-waveform-canvas__stage--${resolvedSurfaceTone.value}`,
+]);
+const palette = computed(() =>
+  resolvedSurfaceTone.value === "light"
+    ? {
+        minorGrid: "rgba(148, 163, 184, 0.18)",
+        majorGrid: "rgba(100, 116, 139, 0.28)",
+        baseline: "rgba(71, 85, 105, 0.32)",
+        labelText: "rgba(15, 23, 42, 0.72)",
+        labelBackground: "rgba(255, 255, 255, 0.94)",
+        emptyText: "rgba(51, 65, 85, 0.72)",
+        sweepHeadLine: "rgba(37, 99, 235, 0.85)",
+        sweepHeadGlowStart: "rgba(37, 99, 235, 0)",
+        sweepHeadGlowMid: "rgba(59, 130, 246, 0.16)",
+        sweepHeadGlowEnd: "rgba(59, 130, 246, 0.38)",
+        xAxisText: "rgba(51, 65, 85, 0.78)",
+      }
+    : {
+        minorGrid: "rgba(148, 163, 184, 0.12)",
+        majorGrid: "rgba(203, 213, 225, 0.18)",
+        baseline: "rgba(148, 163, 184, 0.45)",
+        labelText: "rgba(226, 232, 240, 0.9)",
+        labelBackground: "rgba(8, 18, 38, 0.66)",
+        emptyText: "rgba(203, 213, 225, 0.76)",
+        sweepHeadLine: "rgba(255, 255, 255, 0.92)",
+        sweepHeadGlowStart: "rgba(255, 255, 255, 0)",
+        sweepHeadGlowMid: "rgba(255, 255, 255, 0.12)",
+        sweepHeadGlowEnd: "rgba(255, 255, 255, 0.3)",
+        xAxisText: "rgba(203, 213, 225, 0.82)",
+      },
+);
 
 const normalizedSamples = computed(() =>
   props.samples.map((sample) => {
@@ -104,29 +162,14 @@ const normalizedSamples = computed(() =>
     return Number.isFinite(numericValue) ? numericValue : null;
   }),
 );
-
-const sweepSegments = computed(() => {
-  const cleanSamples = normalizedSamples.value.filter((sample) => sample !== null);
-  const cycleLength = Math.max(
-    2,
-    Math.round(Number(props.sweepCycleLength) || cleanSamples.length || 2),
-  );
-  const current = cleanSamples.slice(-cycleLength);
-  const previous = cleanSamples.slice(-(cycleLength * 2), -cycleLength);
-
-  return {
-    cycleLength,
-    current,
-    previous: previous.length ? previous : current,
-  };
-});
-
+const sweepCleanSamples = computed(() =>
+  normalizedSamples.value.filter((sample) => sample !== null),
+);
 const hasDrawableSamples = computed(() =>
   props.oscilloscopeMode
-    ? sweepSegments.value.current.length > 0
+    ? sweepCurrentSegment.value.length > 0 || sweepQueuedSegment.value.length > 0
     : normalizedSamples.value.some((sample) => sample !== null),
 );
-
 const xAxisTicks = computed(() => {
   if (!props.showXAxisLabels) {
     return [];
@@ -178,15 +221,39 @@ const formatXAxisTick = (value) => {
   return numericValue.toFixed(1);
 };
 
-const scheduleRender = () => {
-  if (animationFrameId) {
-    window.cancelAnimationFrame(animationFrameId);
+const resolveSweepCycleLength = () =>
+  Math.max(
+    2,
+    Math.round(Number(props.sweepCycleLength) || sweepCleanSamples.value.length || 2),
+  );
+
+const createSweepSnapshot = () => {
+  const cycleLength = resolveSweepCycleLength();
+  const cleanSamples = sweepCleanSamples.value;
+
+  return cleanSamples.slice(-cycleLength);
+};
+
+const ensureSweepSnapshots = () => {
+  const snapshot = createSweepSnapshot();
+
+  sweepQueuedSegment.value = snapshot;
+
+  if (!sweepCurrentSegment.value.length) {
+    sweepCurrentSegment.value = snapshot;
   }
 
-  animationFrameId = window.requestAnimationFrame(() => {
-    animationFrameId = 0;
-    renderWaveform();
-  });
+  if (!sweepNextSegment.value.length) {
+    sweepNextSegment.value = snapshot;
+  }
+};
+
+const resetSweepState = () => {
+  sweepCurrentSegment.value = [];
+  sweepNextSegment.value = [];
+  sweepQueuedSegment.value = [];
+  sweepRevealX.value = 0;
+  lastSweepFrameAt = 0;
 };
 
 const syncCanvasSize = () => {
@@ -216,7 +283,7 @@ const drawGrid = (context, width, height) => {
   const minorHorizontalStep = majorHorizontalStep / 2;
 
   context.save();
-  context.strokeStyle = "rgba(148, 163, 184, 0.12)";
+  context.strokeStyle = palette.value.minorGrid;
   context.lineWidth = 1;
 
   for (let x = 0; x <= width + 0.5; x += minorVerticalStep) {
@@ -233,7 +300,7 @@ const drawGrid = (context, width, height) => {
     context.stroke();
   }
 
-  context.strokeStyle = "rgba(203, 213, 225, 0.18)";
+  context.strokeStyle = palette.value.majorGrid;
 
   for (let x = 0; x <= width + 0.5; x += majorVerticalStep) {
     context.beginPath();
@@ -254,7 +321,7 @@ const drawGrid = (context, width, height) => {
 
 const drawBaseline = (context, width, height) => {
   context.save();
-  context.strokeStyle = "rgba(148, 163, 184, 0.45)";
+  context.strokeStyle = palette.value.baseline;
   context.lineWidth = 1;
   context.beginPath();
   context.moveTo(0, height / 2);
@@ -276,7 +343,6 @@ const createYMapper = (height) => {
   };
 
   return {
-    bottomPadding,
     yFor,
   };
 };
@@ -299,7 +365,7 @@ const drawContinuousWaveform = (
 
   if (fillArea && sampleCount > 1) {
     const areaGradient = context.createLinearGradient(0, 0, 0, height);
-    areaGradient.addColorStop(0, `${props.lineColor}40`);
+    areaGradient.addColorStop(0, `${props.lineColor}30`);
     areaGradient.addColorStop(1, `${props.lineColor}00`);
 
     context.beginPath();
@@ -337,11 +403,11 @@ const drawContinuousWaveform = (
   });
 
   context.strokeStyle = props.lineColor;
-  context.lineWidth = props.oscilloscopeMode ? 2 : 1.75;
+  context.lineWidth = props.oscilloscopeMode ? 2.4 : 1.8;
   context.lineJoin = "round";
   context.lineCap = "round";
-  context.shadowColor = `${props.lineColor}66`;
-  context.shadowBlur = props.oscilloscopeMode ? 6 : 10;
+  context.shadowColor = `${props.lineColor}52`;
+  context.shadowBlur = props.oscilloscopeMode ? 6 : 8;
   context.stroke();
   context.shadowBlur = 0;
 };
@@ -386,35 +452,34 @@ const drawScrollWaveform = (context, width, height, yFor) => {
   });
 
   context.strokeStyle = props.lineColor;
-  context.lineWidth = 1.75;
+  context.lineWidth = 1.8;
   context.lineJoin = "round";
   context.lineCap = "round";
-  context.shadowColor = `${props.lineColor}66`;
-  context.shadowBlur = 10;
+  context.shadowColor = `${props.lineColor}4D`;
+  context.shadowBlur = 8;
   context.stroke();
   context.shadowBlur = 0;
 };
 
 const drawSweepWaveform = (context, width, height, yFor) => {
-  const { current, previous, cycleLength } = sweepSegments.value;
+  const currentSamples = sweepCurrentSegment.value;
+  const nextSamples = sweepNextSegment.value.length
+    ? sweepNextSegment.value
+    : sweepCurrentSegment.value;
+  const revealX = Math.round(Math.max(0, Math.min(width, sweepRevealX.value)));
 
-  if (!current.length) {
+  if (!currentSamples.length && !nextSamples.length) {
     return;
   }
 
-  const rawHeadIndex = Number(props.sweepHeadIndex) || 0;
-  const clampedHeadIndex = Math.max(0, Math.min(cycleLength, rawHeadIndex));
-  const revealRatio = cycleLength > 0 ? clampedHeadIndex / cycleLength : 0;
-  const revealX = Math.round(revealRatio * width);
-
-  if (previous.length && revealX < width) {
+  if (currentSamples.length && revealX < width) {
     context.save();
     context.beginPath();
     context.rect(revealX, 0, width - revealX, height);
     context.clip();
     drawContinuousWaveform(
       context,
-      previous,
+      currentSamples,
       width,
       height,
       yFor,
@@ -423,43 +488,47 @@ const drawSweepWaveform = (context, width, height, yFor) => {
     context.restore();
   }
 
-  if (revealX > 0) {
+  if (nextSamples.length && revealX > 0) {
     context.save();
     context.beginPath();
     context.rect(0, 0, revealX, height);
     context.clip();
     drawContinuousWaveform(
       context,
-      current,
+      nextSamples,
       width,
       height,
       yFor,
       props.fillArea,
     );
     context.restore();
-  } else if (!previous.length) {
-    drawContinuousWaveform(
-      context,
-      current,
-      width,
-      height,
-      yFor,
-      props.fillArea,
-    );
   }
 
   if (props.showSweepHead) {
     const headX = Math.max(0, Math.min(width, revealX));
+    const bandStart = Math.max(0, headX - 18);
+    const bandWidth = Math.min(width - bandStart, 26);
+    const glow = context.createLinearGradient(
+      bandStart,
+      0,
+      bandStart + bandWidth,
+      0,
+    );
+    glow.addColorStop(0, palette.value.sweepHeadGlowStart);
+    glow.addColorStop(0.5, palette.value.sweepHeadGlowMid);
+    glow.addColorStop(1, palette.value.sweepHeadGlowEnd);
 
+    // 扫描头按屏幕像素连续推进，满屏后才切换到下一段，避免中途在画面中间重启。
     context.save();
-    context.fillStyle = props.backgroundColor;
+    context.fillStyle = glow;
+    context.fillRect(bandStart, 0, bandWidth, height);
+    context.fillStyle = resolvedBackgroundColor.value;
     context.fillRect(headX, 0, 2, height);
-    context.strokeStyle = `${props.lineColor}66`;
-    context.lineWidth = 1;
-    context.setLineDash([6, 5]);
+    context.strokeStyle = palette.value.sweepHeadLine;
+    context.lineWidth = 1.5;
     context.beginPath();
-    context.moveTo(headX, 0);
-    context.lineTo(headX, height);
+    context.moveTo(headX + 0.5, 0);
+    context.lineTo(headX + 0.5, height);
     context.stroke();
     context.restore();
   }
@@ -485,7 +554,7 @@ const renderWaveform = () => {
 
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   context.clearRect(0, 0, width, height);
-  context.fillStyle = props.backgroundColor;
+  context.fillStyle = resolvedBackgroundColor.value;
   context.fillRect(0, 0, width, height);
 
   if (props.gridVisible) {
@@ -507,38 +576,111 @@ const renderWaveform = () => {
   drawScrollWaveform(context, width, height, yFor);
 };
 
+const advanceSweep = (timestamp) => {
+  if (!props.oscilloscopeMode) {
+    lastSweepFrameAt = 0;
+    return;
+  }
+
+  ensureSweepSnapshots();
+
+  if (!sweepCurrentSegment.value.length) {
+    return;
+  }
+
+  if (lastSweepFrameAt === 0) {
+    lastSweepFrameAt = timestamp;
+    return;
+  }
+
+  if (props.paused) {
+    lastSweepFrameAt = timestamp;
+    return;
+  }
+
+  const deltaSec = Math.max(0, (timestamp - lastSweepFrameAt) / 1000);
+  const speedPxPerSec = stageWidth.value / Math.max(2, Number(props.seconds) || 8);
+
+  lastSweepFrameAt = timestamp;
+  sweepRevealX.value += speedPxPerSec * deltaSec;
+
+  if (sweepRevealX.value >= stageWidth.value) {
+    const latestSnapshot = sweepQueuedSegment.value.length
+      ? [...sweepQueuedSegment.value]
+      : createSweepSnapshot();
+
+    sweepCurrentSegment.value = sweepNextSegment.value.length
+      ? [...sweepNextSegment.value]
+      : latestSnapshot;
+    sweepNextSegment.value = latestSnapshot;
+    sweepRevealX.value = 0;
+  }
+};
+
+const animationLoop = (timestamp) => {
+  advanceSweep(timestamp);
+  renderWaveform();
+  animationFrameId = window.requestAnimationFrame(animationLoop);
+};
+
 onMounted(() => {
   syncCanvasSize();
-  scheduleRender();
+  ensureSweepSnapshots();
 
   if (rootRef.value) {
     resizeObserver = new ResizeObserver(() => {
       syncCanvasSize();
-      scheduleRender();
     });
     resizeObserver.observe(rootRef.value);
   }
+
+  animationFrameId = window.requestAnimationFrame(animationLoop);
 });
 
 watch(
+  () => [props.samples, props.sweepCycleLength, props.oscilloscopeMode],
+  () => {
+    if (!props.oscilloscopeMode) {
+      return;
+    }
+
+    const snapshot = createSweepSnapshot();
+    sweepQueuedSegment.value = snapshot;
+
+    if (!sweepCurrentSegment.value.length) {
+      sweepCurrentSegment.value = snapshot;
+      sweepNextSegment.value = snapshot;
+    }
+  },
+  { deep: true, immediate: true },
+);
+
+watch(
+  () => props.paused,
+  () => {
+    lastSweepFrameAt = 0;
+  },
+);
+
+watch(
   () => [
-    props.samples,
     props.lowerLimit,
     props.upperLimit,
     props.lineColor,
     props.backgroundColor,
+    props.surfaceTone,
     props.gridVisible,
     props.height,
     props.fillArea,
-    props.oscilloscopeMode,
-    props.showSweepHead,
-    props.sweepHeadIndex,
-    props.sweepCycleLength,
     props.seconds,
+    props.showXAxisLabels,
+    props.showYAxisMinMaxLabels,
+    props.xAxisLabelMin,
+    props.xAxisLabelMax,
+    props.xAxisLabelInterval,
   ],
   () => {
     syncCanvasSize();
-    scheduleRender();
   },
   { deep: true },
 );
@@ -560,7 +702,7 @@ onBeforeUnmount(() => {
     class="streaming-waveform-canvas"
     :style="{ '--waveform-height': `${height}px` }"
   >
-    <div class="streaming-waveform-canvas__stage">
+    <div :class="stageClasses">
       <canvas
         ref="canvasRef"
         class="streaming-waveform-canvas__surface"
@@ -569,12 +711,20 @@ onBeforeUnmount(() => {
       <div
         v-if="showYAxisMinMaxLabels"
         class="streaming-waveform-canvas__y-label streaming-waveform-canvas__y-label--top"
+        :style="{
+          color: palette.labelText,
+          backgroundColor: palette.labelBackground,
+        }"
       >
         {{ formatAxisLabel(upperLimit) }}
       </div>
       <div
         v-if="showYAxisMinMaxLabels"
         class="streaming-waveform-canvas__y-label streaming-waveform-canvas__y-label--bottom"
+        :style="{
+          color: palette.labelText,
+          backgroundColor: palette.labelBackground,
+        }"
       >
         {{ formatAxisLabel(lowerLimit) }}
       </div>
@@ -582,6 +732,7 @@ onBeforeUnmount(() => {
       <div
         v-if="!hasDrawableSamples"
         class="streaming-waveform-canvas__empty"
+        :style="{ color: palette.emptyText }"
       >
         等待波形数据
       </div>
@@ -590,6 +741,7 @@ onBeforeUnmount(() => {
     <div
       v-if="showXAxisLabels"
       class="streaming-waveform-canvas__x-axis"
+      :style="{ color: palette.xAxisText }"
     >
       <span
         v-for="tick in xAxisTicks"
@@ -610,9 +762,19 @@ onBeforeUnmount(() => {
     position: relative;
     height: var(--waveform-height);
     overflow: hidden;
-    border-radius: 18px;
+    border-radius: 14px;
     border: 1px solid rgba(148, 163, 184, 0.14);
-    background: #081226;
+
+    &--light {
+      border-color: rgba(148, 163, 184, 0.78);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.82),
+        0 8px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    &--dark {
+      border-color: rgba(148, 163, 184, 0.14);
+    }
   }
 
   &__surface {
@@ -626,8 +788,6 @@ onBeforeUnmount(() => {
     right: 10px;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba(8, 18, 38, 0.66);
-    color: rgba(226, 232, 240, 0.9);
     font-size: 11px;
     line-height: 1;
 
@@ -645,7 +805,6 @@ onBeforeUnmount(() => {
     inset: 0;
     display: grid;
     place-items: center;
-    color: rgba(203, 213, 225, 0.76);
     font-size: 13px;
     letter-spacing: 0.02em;
   }
@@ -655,7 +814,6 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     gap: 8px;
     padding: 8px 6px 0;
-    color: rgba(71, 85, 105, 0.88);
     font-size: 11px;
     line-height: 1;
   }

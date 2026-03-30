@@ -137,10 +137,10 @@ const polylinePoints = computed(() => {
     </div>
 
     <footer class="ventilator-loop-chart__footer">
-      <span>{{ formatValue(bounds.minX) }}</span>
-      <span>{{ formatValue(bounds.maxX) }}</span>
-      <span>{{ formatValue(bounds.minY) }}</span>
-      <span>{{ formatValue(bounds.maxY) }}</span>
+      <span>Xmin {{ formatValue(bounds.minX) }}</span>
+      <span>Xmax {{ formatValue(bounds.maxX) }}</span>
+      <span>Ymin {{ formatValue(bounds.minY) }}</span>
+      <span>Ymax {{ formatValue(bounds.maxY) }}</span>
     </footer>
   </article>
 </template>
@@ -151,14 +151,10 @@ const polylinePoints = computed(() => {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  padding: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.98) 100%);
-  box-shadow:
-    0 14px 30px rgba(15, 23, 42, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  padding: 14px;
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  border-radius: 18px;
+  background: #ffffff;
 
   &__header {
     display: flex;
@@ -184,12 +180,11 @@ const polylinePoints = computed(() => {
   &__stage {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 1.05 / 1;
-    border-radius: 18px;
-    border: 1px solid rgba(148, 163, 184, 0.16);
+    aspect-ratio: 1.04 / 1;
+    border-radius: 14px;
+    border: 1px solid rgba(203, 213, 225, 0.92);
     background:
-      radial-gradient(circle at top, rgba(79, 124, 255, 0.08), transparent 44%),
-      linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 1) 100%);
   }
 
   &__svg {
@@ -199,7 +194,7 @@ const polylinePoints = computed(() => {
   }
 
   &__grid {
-    stroke: rgba(148, 163, 184, 0.3);
+    stroke: rgba(148, 163, 184, 0.32);
     stroke-width: 0.45;
   }
 
@@ -221,7 +216,7 @@ const polylinePoints = computed(() => {
 
   &__footer {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     color: #64748b;
     font-size: 11px;
