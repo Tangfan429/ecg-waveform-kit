@@ -5,6 +5,7 @@ import WatchAiAnalysisCard from "./lib/components/WatchAiAnalysisCard.vue";
 import WatchAiGatewaySettings from "./lib/components/WatchAiGatewaySettings.vue";
 import WatchHistorySelector from "./lib/components/WatchHistorySelector.vue";
 import WaveformCenter from "./lib/components/WaveformCenter.vue";
+import DocumentsWorkspace from "./features/documents/views/DocumentsWorkspace.vue";
 import { useWatchEcgAiConfig } from "./lib/composables/useWatchEcgAiConfig";
 import { useWatchEcgAiAnalysis } from "./lib/composables/useWatchEcgAiAnalysis";
 import { useWatchEcgFeed } from "./lib/composables/useWatchEcgFeed";
@@ -79,6 +80,12 @@ const surfaceOptions = Object.freeze([
     value: "diagnosis",
     label: "诊断波形",
     description: "诊断工作台保留十二导联、动态心电、动态血压和分析扩展能力。",
+  },
+  {
+    value: "documents",
+    label: "医院文书",
+    description:
+      "医院文书工作台提供模板化录入、A4 分页预览与打印输出，适合门急诊病历和病程记录场景。",
   },
   {
     value: "monitoring",
@@ -696,6 +703,9 @@ async function handleDeleteHistoryRecord(recordId) {
         v-model:mode="monitoringMode"
       />
 
+      <DocumentsWorkspace
+        v-else-if="surfaceMode === 'documents'"
+      />
       <WaveformCenter
         v-else
         v-model:exam-mode="examMode"
