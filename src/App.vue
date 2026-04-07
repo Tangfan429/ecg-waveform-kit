@@ -6,6 +6,7 @@ import WatchAiGatewaySettings from "./lib/components/WatchAiGatewaySettings.vue"
 import WatchHistorySelector from "./lib/components/WatchHistorySelector.vue";
 import WaveformCenter from "./lib/components/WaveformCenter.vue";
 import DocumentsWorkspace from "./features/documents/views/DocumentsWorkspace.vue";
+import BodySelectorWorkspace from "./features/body-selector/views/BodySelectorWorkspace.vue";
 import { useWatchEcgAiConfig } from "./lib/composables/useWatchEcgAiConfig";
 import { useWatchEcgAiAnalysis } from "./lib/composables/useWatchEcgAiAnalysis";
 import { useWatchEcgFeed } from "./lib/composables/useWatchEcgFeed";
@@ -91,6 +92,11 @@ const surfaceOptions = Object.freeze([
     value: "monitoring",
     label: "监护波形",
     description: "监护工作台承接 ICU 监护仪与呼吸机波形，并保留工具栏、打印和全屏能力。",
+  },
+  {
+    value: "body-selector",
+    label: "人体部位",
+    description: "人体部位选择器用于快速标注体表位置，并把选中部位转成结构化数据，适合作为后续症状、体表问题或设备贴附位点的基础能力。",
   },
 ]);
 
@@ -701,6 +707,10 @@ async function handleDeleteHistoryRecord(recordId) {
       <MonitoringCenter
         v-if="surfaceMode === 'monitoring'"
         v-model:mode="monitoringMode"
+      />
+
+      <BodySelectorWorkspace
+        v-else-if="surfaceMode === 'body-selector'"
       />
 
       <DocumentsWorkspace
