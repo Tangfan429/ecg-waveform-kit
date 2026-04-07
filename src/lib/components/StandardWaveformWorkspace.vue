@@ -28,6 +28,7 @@ import WaveformContextMenu from "./WaveformContextMenu.vue";
 import WaveformSettingsDialog from "./WaveformSettingsDialog.vue";
 import WaveformTimeNavigatorBar from "./WaveformTimeNavigatorBar.vue";
 import WaveformToolbar from "./WaveformToolbar.vue";
+import WaveformWorkspaceSidebar from "./WaveformWorkspaceSidebar.vue";
 
 defineOptions({
   name: "StandardWaveformWorkspace",
@@ -115,7 +116,7 @@ const availableLayoutOptions = computed(() =>
 );
 const isSingleLeadView = computed(() => isSingleLeadMode(resolvedLeadMode.value));
 const printActionLabel = computed(() =>
-  isSingleLeadView.value ? "单导联打印待接入" : "打印波形",
+  isSingleLeadView.value ? "Lead I 打印待接入" : "打印波形",
 );
 
 const baseWaveformData = computed(() =>
@@ -154,6 +155,15 @@ const waveformMetricRows = computed(() => ({
   heartRate: [],
   rrInterval: [],
 }));
+const resolvedLayoutLabel = computed(
+  () =>
+    availableLayoutOptions.value.find(
+      (option) => option.value === waveformLayout.value,
+    )?.label || waveformLayout.value,
+);
+const waveformDisplayModeLabel = computed(() =>
+  waveformDisplayMode.value === "sync" ? "同步模式" : "异步模式",
+);
 
 const {
   reportTemplateOptions,
@@ -171,6 +181,85 @@ const {
   setZoom: setWaveformZoom,
   toggleFullscreen: toggleWaveformFullscreen,
 } = useWaveformViewport(workspaceRef);
+
+const hasMeasurementValue = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue);
+};
+
+const formatMeasurementValue = (value, unit = "") => {
+  if (!hasMeasurementValue(value)) {
+    return "--";
+  }
+
+  const numericValue = Number(value);
+  const normalizedValue = Number.isInteger(numericValue)
+    ? String(numericValue)
+    : numericValue.toFixed(3).replace(/0+$/u, "").replace(/\.$/u, "");
+
+  return unit ? `${normalizedValue}${unit}` : normalizedValue;
+};
+
+const formatMetaField = (value) => {
+  const normalizedValue = String(value ?? "").trim();
+  return normalizedValue || "--";
+};
+
+const sidebarOverviewItems = computed(() => [
+  { label: "导联视图", value: resolvedLeadModeConfig.value.shortLabel },
+  { label: "布局", value: resolvedLayoutLabel.value },
+  { label: "增益", value: `${waveformGain.value}mm/mV` },
+  { label: "走速", value: `${waveformSpeed.value}mm/s` },
+  { label: "显示", value: waveformDisplayModeLabel.value },
+  { label: "时长", value: `${waveformDuration.value}s` },
+  { label: "采样率", value: `${props.sampleRate}Hz` },
+  {
+    label: "节律导航",
+    value: isWaveformTimeNavigatorVisible.value ? "已开启" : "未开启",
+  },
+]);
+
+const sidebarMetricItems = computed(() => [
+  { label: "HR", value: formatMeasurementValue(props.measurementData?.hr, " bpm") },
+  { label: "PR", value: formatMeasurementValue(props.measurementData?.pr, " ms") },
+  { label: "QRS", value: formatMeasurementValue(props.measurementData?.qrs, " ms") },
+  { label: "QT", value: formatMeasurementValue(props.measurementData?.qt, " ms") },
+  { label: "QTc", value: formatMeasurementValue(props.measurementData?.qtc, " ms") },
+  {
+    label: "电轴",
+    value: formatMeasurementValue(props.measurementData?.qrsAxis, "°"),
+  },
+]);
+
+const sidebarPatientItems = computed(() => [
+  { label: "姓名", value: formatMetaField(resolvedPrintMeta.value.patientName) },
+  { label: "性别", value: formatMetaField(resolvedPrintMeta.value.gender) },
+  { label: "年龄", value: formatMetaField(resolvedPrintMeta.value.age) },
+  { label: "科室", value: formatMetaField(resolvedPrintMeta.value.department) },
+  { label: "检查时间", value: formatMetaField(resolvedPrintMeta.value.examTime) },
+  { label: "报告标题", value: formatMetaField(resolvedPrintMeta.value.reportTitle) },
+]);
+
+const sidebarDiagnosisLines = computed(() => {
+  const diagnosisText = String(
+    resolvedPrintMeta.value.diagnosisResult || "",
+  ).trim();
+
+  if (!diagnosisText) {
+    return [];
+  }
+
+  return diagnosisText
+    .split(/\r?\n/gu)
+    .map((line) => line.trim())
+    .filter(Boolean);
+});
+
+const sidebarTips = computed(() => [
+  "主波形区保持标准纸速与增益，避免大屏下判读语义失真。",
+  "可在左侧直接使用平行尺和同步时间导航，不影响 ECG 纸面比例。",
+  "右侧面板承接测量、诊断和病例信息，减少大屏空白感。",
+]);
 
 const clampSyncWindowStartMs = (value) => {
   const numericValue = Number(value);
@@ -303,7 +392,7 @@ const handleWaveformContextMenuSelect = (command) => {
 
 const handleApplyWaveformSettings = (settingsPayload) => {
   applyWaveformSettings(settingsPayload);
-  ElMessage.success("波形设置已更新。");
+  ElMessage.success("波形设置已更新");
 };
 
 const handleZoomChange = (value) => {
@@ -318,7 +407,7 @@ const handleFullscreen = async () => {
 
 const handlePrint = () => {
   if (isSingleLeadView.value) {
-    ElMessage.info("Lead I 单导联浏览已接通，打印模板暂未单独适配。");
+    ElMessage.info("Lead I 单导联视图暂不提供独立打印模板");
     return;
   }
 
@@ -334,7 +423,7 @@ const handlePrint = () => {
   });
 
   if (!success) {
-    ElMessage.warning("当前波形无法生成打印内容。");
+    ElMessage.warning("当前波形无法生成打印内容");
     return;
   }
 
@@ -462,6 +551,15 @@ const handleLeadModeValueChange = (value) => {
           @update:model-value="handleSyncWindowChange"
         />
       </div>
+
+      <WaveformWorkspaceSidebar
+        class="standard-waveform-workspace__sidebar"
+        :overview-items="sidebarOverviewItems"
+        :metric-items="sidebarMetricItems"
+        :patient-items="sidebarPatientItems"
+        :diagnosis-lines="sidebarDiagnosisLines"
+        :tips="sidebarTips"
+      />
     </div>
 
     <WaveformSettingsDialog
@@ -540,6 +638,8 @@ const handleLeadModeValueChange = (value) => {
 
   &__body {
     flex: 1;
+    display: flex;
+    min-width: 0;
     min-height: 0;
     padding: 0;
   }
@@ -547,9 +647,23 @@ const handleLeadModeValueChange = (value) => {
   &__waveform {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-width: 0;
     height: 100%;
     min-height: 0;
     background: $gray-white;
+  }
+
+  &__sidebar {
+    display: none;
+  }
+}
+
+@media (min-width: 1360px) {
+  .standard-waveform-workspace {
+    &__sidebar {
+      display: flex;
+    }
   }
 }
 
