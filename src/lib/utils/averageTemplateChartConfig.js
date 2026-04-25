@@ -72,12 +72,12 @@ const SPEED_CONFIGS = {
 };
 
 export const AVERAGE_TEMPLATE_MARKERS = [
-  { key: "P1", ratio: 0.145, width: 19 },
-  { key: "P2", ratio: 0.273, width: 22 },
-  { key: "Q", ratio: 0.336, width: 15 },
-  { key: "S", ratio: 0.417, width: 13 },
-  { key: "T1", ratio: 0.526, width: 19 },
-  { key: "T2", ratio: 0.746, width: 22 },
+  { key: "P1", sourceKey: "pOnset", ratio: 0.145, width: 19 },
+  { key: "P2", sourceKey: "pOffset", ratio: 0.273, width: 22 },
+  { key: "Q", sourceKey: "qOnset", ratio: 0.336, width: 15 },
+  { key: "S", sourceKey: "sPeak", ratio: 0.417, width: 13 },
+  { key: "T1", sourceKey: "tOnset", ratio: 0.526, width: 19 },
+  { key: "T2", sourceKey: "tOffset", ratio: 0.746, width: 22 },
 ];
 
 export const AVERAGE_TEMPLATE_WAVE_LAYOUT = {

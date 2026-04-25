@@ -4,9 +4,9 @@ import MonitoringCenter from "./lib/components/monitoring/MonitoringCenter.vue";
 import WatchAiAnalysisCard from "./lib/components/WatchAiAnalysisCard.vue";
 import WatchAiGatewaySettings from "./lib/components/WatchAiGatewaySettings.vue";
 import WatchHistorySelector from "./lib/components/WatchHistorySelector.vue";
-import WaveformCenter from "./lib/components/WaveformCenter.vue";
 import DocumentsWorkspace from "./features/documents/views/DocumentsWorkspace.vue";
 import BodySelectorWorkspace from "./features/body-selector/views/BodySelectorWorkspace.vue";
+import DiagnosisWorkspace from "./features/diagnosis/views/DiagnosisWorkspace.vue";
 import { useWatchEcgAiConfig } from "./lib/composables/useWatchEcgAiConfig";
 import { useWatchEcgAiAnalysis } from "./lib/composables/useWatchEcgAiAnalysis";
 import { useWatchEcgFeed } from "./lib/composables/useWatchEcgFeed";
@@ -716,7 +716,7 @@ async function handleDeleteHistoryRecord(recordId) {
       <DocumentsWorkspace
         v-else-if="surfaceMode === 'documents'"
       />
-      <WaveformCenter
+      <DiagnosisWorkspace
         v-else
         v-model:exam-mode="examMode"
         v-model:analysis-type="analysisType"

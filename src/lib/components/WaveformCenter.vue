@@ -240,6 +240,7 @@ const handleExamModeChange = (mode) => {
         :lead-mode="leadModeModel"
         :lead-mode-options="leadModeOptions"
         :initial-layout="standardInitialLayout"
+        compare-enabled
         @update:lead-mode="leadModeModel = $event"
         @toolbar-action="$emit('toolbar-action', $event)"
         @print="$emit('print-standard', $event)"

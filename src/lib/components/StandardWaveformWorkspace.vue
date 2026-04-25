@@ -79,6 +79,10 @@ const props = defineProps({
     type: String,
     default: "sync",
   },
+  compareEnabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["toolbar-action", "print", "update:leadMode"]);
@@ -93,6 +97,7 @@ const waveformGain = ref(props.initialGain);
 const waveformSpeed = ref(props.initialSpeed);
 const waveformDisplayMode = ref(props.initialDisplayMode);
 const isParallelRulerActive = ref(false);
+const isRulerEnabled = computed(() => !isParallelRulerActive.value);
 const syncWindowStartMs = ref(0);
 
 const waveformContextMenuPosition = ref({
@@ -304,6 +309,10 @@ const clearParallelRulers = () => {
   waveformRef.value?.clearParallelRulers();
 };
 
+const clearRuler = () => {
+  waveformRef.value?.clearRuler();
+};
+
 const emitToolbarAction = (name, payload = {}) => {
   emit("toolbar-action", {
     name,
@@ -311,6 +320,8 @@ const emitToolbarAction = (name, payload = {}) => {
     gain: waveformGain.value,
     speed: waveformSpeed.value,
     displayMode: waveformDisplayMode.value,
+    duration: waveformDuration.value,
+    appearanceSettings: waveformAppearanceConfig.value,
     ...payload,
   });
 };
@@ -321,7 +332,16 @@ const handleRuler = () => {
 
   if (!isParallelRulerActive.value) {
     clearParallelRulers();
+    return;
   }
+
+  // 平行尺与电子尺互斥，避免两个覆盖层同时抢占指针事件。
+  clearRuler();
+};
+
+const handleCompare = () => {
+  closeWaveformContextMenu();
+  emitToolbarAction("compare");
 };
 
 const handleReanalyze = () => {
@@ -463,6 +483,7 @@ const handleLeadModeValueChange = (value) => {
 
   if (isParallelRulerActive.value) {
     clearParallelRulers();
+    clearRuler();
     isParallelRulerActive.value = false;
   }
 
@@ -492,7 +513,9 @@ const handleLeadModeValueChange = (value) => {
         :zoom="waveformZoomPercent"
         :fullscreen-active="isWaveformFullscreen"
         :parallel-ruler-active="isParallelRulerActive"
+        :show-compare="props.compareEnabled"
         @ruler="handleRuler"
+        @compare="handleCompare"
         @lead-mode-change="handleLeadModeValueChange"
         @reanalyze="handleReanalyze"
         @open-settings="handleOpenWaveformSettings"
@@ -535,6 +558,7 @@ const handleLeadModeValueChange = (value) => {
           :appearance-settings="waveformAppearanceConfig"
           :zoom="waveformZoomPercent"
           :parallel-ruler-active="isParallelRulerActive"
+          :ruler-enabled="isRulerEnabled"
           :sync-window-start-ms="syncWindowStartMs"
           @context-menu="handleWaveformContextMenu"
           @context-menu-close="closeWaveformContextMenu"

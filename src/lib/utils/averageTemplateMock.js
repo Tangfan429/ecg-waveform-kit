@@ -1,3 +1,4 @@
+import { AVERAGE_TEMPLATE_MARKERS, AVERAGE_TEMPLATE_SAMPLE_RATE } from "./averageTemplateChartConfig";
 import { generateMockWaveform } from "./mockWaveformData";
 
 export const AVERAGE_TEMPLATE_DEFAULT_LEAD = "II";
@@ -300,30 +301,155 @@ export function getAverageTemplateDisplayLead(leadFilter) {
   return leadFilter === "ALL" ? AVERAGE_TEMPLATE_DEFAULT_LEAD : leadFilter;
 }
 
-export function getAverageTemplateWavePayload(currentLead, selectedLeads) {
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function roundIntervalToMs(indexDelta, sampleRate) {
+  const safeSampleRate = Math.max(1, Number(sampleRate) || AVERAGE_TEMPLATE_SAMPLE_RATE);
+  return Math.max(1, Math.round((Math.max(0, indexDelta) * 1000) / safeSampleRate));
+}
+
+function getMarkerIndex(markers, sourceKey, fallbackIndex = 0) {
+  const rawIndex = Number(markers?.[sourceKey]?.index);
+  return Number.isFinite(rawIndex) ? Math.max(0, Math.round(rawIndex)) : fallbackIndex;
+}
+
+function buildDefaultMarkerMap(sampleCount) {
+  const maxIndex = Math.max(0, Number(sampleCount || 0) - 1);
+
+  return AVERAGE_TEMPLATE_MARKERS.reduce((result, marker) => {
+    result[marker.sourceKey] = {
+      index: clamp(Math.round(maxIndex * marker.ratio), 0, maxIndex),
+    };
+    return result;
+  }, {});
+}
+
+function deriveMeasurementsFromMarkers(leadName, markers, sampleRate) {
+  const baseMetrics =
+    LEAD_MEASUREMENT_PRESETS[leadName] ||
+    LEAD_MEASUREMENT_PRESETS[AVERAGE_TEMPLATE_DEFAULT_LEAD];
+
+  const pOnset = getMarkerIndex(markers, "pOnset");
+  const pOffset = getMarkerIndex(markers, "pOffset", pOnset);
+  const qOnset = getMarkerIndex(markers, "qOnset", pOffset);
+  const sPeak = getMarkerIndex(markers, "sPeak", qOnset);
+  const tOnset = getMarkerIndex(markers, "tOnset", sPeak);
+  const tOffset = getMarkerIndex(markers, "tOffset", tOnset);
+
+  const prInterval = roundIntervalToMs(qOnset - pOnset, sampleRate);
+  const pDuration = roundIntervalToMs(pOffset - pOnset, sampleRate);
+  const qrs = roundIntervalToMs(sPeak - qOnset, sampleRate);
+  const qt = roundIntervalToMs(tOffset - qOnset, sampleRate);
+  const tDuration = roundIntervalToMs(tOffset - tOnset, sampleRate);
+  const correction = Math.sqrt(60 / Math.max(baseMetrics.hr || 1, 1));
+  const qtc = Math.max(1, Math.round(qt / correction));
+
+  return {
+    ...baseMetrics,
+    pr: prInterval,
+    prInterval,
+    qrs,
+    qt,
+    qtc,
+    pDuration,
+    tDuration,
+  };
+}
+
+export function createAverageTemplateLeadState(leadName, sampleRate = AVERAGE_TEMPLATE_SAMPLE_RATE) {
+  const wave = extractAverageTemplateWave(leadName);
+  const markers = buildDefaultMarkerMap(wave.length);
+
+  return {
+    leadName,
+    sampleRate,
+    wave,
+    markers,
+    parameters: deriveMeasurementsFromMarkers(leadName, markers, sampleRate),
+  };
+}
+
+export function createAverageTemplateLeadStateMap(
+  leadNames = AVERAGE_TEMPLATE_LINE_LEADS,
+  sampleRate = AVERAGE_TEMPLATE_SAMPLE_RATE,
+) {
+  return leadNames.reduce((result, leadName) => {
+    result[leadName] = createAverageTemplateLeadState(leadName, sampleRate);
+    return result;
+  }, {});
+}
+
+export function updateAverageTemplateLeadStateMarker(
+  leadState,
+  markerSourceKey,
+  nextIndex,
+) {
+  if (!leadState?.leadName || !markerSourceKey) {
+    return leadState;
+  }
+
+  const maxIndex = Math.max(0, (leadState.wave?.length || 1) - 1);
+  const nextMarkers = {
+    ...(leadState.markers || {}),
+    [markerSourceKey]: {
+      index: clamp(Math.round(Number(nextIndex) || 0), 0, maxIndex),
+    },
+  };
+
+  return {
+    ...leadState,
+    markers: nextMarkers,
+    parameters: deriveMeasurementsFromMarkers(
+      leadState.leadName,
+      nextMarkers,
+      leadState.sampleRate,
+    ),
+  };
+}
+
+export function buildAverageTemplateWavePayloadFromLeadStateMap(
+  leadStateMap,
+  focusLead,
+  selectedLeads,
+) {
   const displayLeads = normalizeAverageTemplateWaveLeads(selectedLeads);
-  const focusLead = displayLeads.includes(currentLead)
-    ? currentLead
-    : displayLeads[displayLeads.length - 1];
+  const resolvedFocusLead = displayLeads.includes(focusLead)
+    ? focusLead
+    : displayLeads[0] || AVERAGE_TEMPLATE_DEFAULT_LEAD;
 
   const lines = displayLeads
-    .map((lead) => ({
-      id: lead,
-      lead,
-      isPrimary: lead === focusLead,
-      wave: extractAverageTemplateWave(lead),
-    }))
+    .map((leadName) => {
+      const leadState = leadStateMap?.[leadName];
+      if (!leadState) {
+        return null;
+      }
+
+      return {
+        id: leadName,
+        lead: leadName,
+        isPrimary: leadName === resolvedFocusLead,
+        wave: leadState.wave,
+        sampleRate: leadState.sampleRate,
+      };
+    })
+    .filter(Boolean)
     .sort((left, right) => Number(left.isPrimary) - Number(right.isPrimary));
 
   return {
-    focusLead,
+    focusLead: resolvedFocusLead,
+    focusMarkers: leadStateMap?.[resolvedFocusLead]?.markers || {},
+    sampleRate:
+      leadStateMap?.[resolvedFocusLead]?.sampleRate || AVERAGE_TEMPLATE_SAMPLE_RATE,
     lines,
   };
 }
 
-export function getAverageTemplateMeasurementRows(lead) {
+export function buildAverageTemplateMeasurementRowsFromLeadState(leadState) {
   const metrics =
-    LEAD_MEASUREMENT_PRESETS[lead] ||
+    leadState?.parameters ||
+    LEAD_MEASUREMENT_PRESETS[leadState?.leadName] ||
     LEAD_MEASUREMENT_PRESETS[AVERAGE_TEMPLATE_DEFAULT_LEAD];
 
   const baseRows = [
@@ -360,4 +486,34 @@ export function getAverageTemplateMeasurementRows(lead) {
   }));
 
   return [...baseRows, ...fillerRows];
+}
+
+export function getAverageTemplateWavePayload(currentLead, selectedLeads) {
+  const displayLeads = normalizeAverageTemplateWaveLeads(selectedLeads);
+  const focusLead = displayLeads.includes(currentLead)
+    ? currentLead
+    : displayLeads[displayLeads.length - 1];
+
+  const lines = displayLeads
+    .map((lead) => ({
+      id: lead,
+      lead,
+      isPrimary: lead === focusLead,
+      wave: extractAverageTemplateWave(lead),
+    }))
+    .sort((left, right) => Number(left.isPrimary) - Number(right.isPrimary));
+
+  return {
+    focusLead,
+    lines,
+  };
+}
+
+export function getAverageTemplateMeasurementRows(lead) {
+  return buildAverageTemplateMeasurementRowsFromLeadState({
+    leadName: lead,
+    parameters:
+      LEAD_MEASUREMENT_PRESETS[lead] ||
+      LEAD_MEASUREMENT_PRESETS[AVERAGE_TEMPLATE_DEFAULT_LEAD],
+  });
 }

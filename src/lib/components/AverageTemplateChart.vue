@@ -1,11 +1,16 @@
 <template>
   <div class="average-template-chart">
     <svg
+      ref="svgRef"
       class="average-template-chart__svg"
       :width="chartSize.width"
       :height="chartSize.height"
       :viewBox="`0 0 ${chartSize.width} ${chartSize.height}`"
+      :style="svgCursorStyle"
       aria-label="average-template-waveform"
+      @pointermove="handleMarkerPointerMove"
+      @pointerup="handleMarkerPointerUp"
+      @pointercancel="handleMarkerPointerCancel"
     >
       <defs>
         <clipPath id="average-template-wave-clip">
@@ -19,7 +24,11 @@
         </clipPath>
       </defs>
 
-      <rect :width="chartSize.width" :height="chartSize.height" :fill="chartBackgroundColor" />
+      <rect
+        :width="chartSize.width"
+        :height="chartSize.height"
+        :fill="chartBackgroundColor"
+      />
       <rect
         :x="plotArea.left"
         :y="plotArea.top"
@@ -106,13 +115,31 @@
       </g>
 
       <g class="average-template-chart__markers">
-        <template v-for="marker in markerPositions" :key="marker.key">
+        <g
+          v-for="marker in markerPositions"
+          :key="marker.key"
+          class="average-template-chart__marker"
+          :class="{
+            'average-template-chart__marker--dragging':
+              activeMarkerSourceKey === marker.sourceKey,
+          }"
+          @pointerdown="handleMarkerPointerDown(marker, $event)"
+        >
+          <rect
+            :x="marker.x - marker.hitWidth / 2"
+            :y="plotArea.top"
+            :width="marker.hitWidth"
+            :height="plotArea.height"
+            fill="transparent"
+          />
           <line
             :x1="marker.x"
             :x2="marker.x"
             :y1="plotArea.top"
             :y2="plotArea.bottom"
-            stroke="#8ED9C0"
+            :stroke="
+              activeMarkerSourceKey === marker.sourceKey ? '#1F9B67' : '#2BA471'
+            "
             stroke-width="1"
           />
           <rect
@@ -134,7 +161,7 @@
           >
             {{ marker.key }}
           </text>
-        </template>
+        </g>
       </g>
 
       <text
@@ -148,11 +175,20 @@
         {{ leadDisplayLabel }}
       </text>
     </svg>
+
+    <!-- 电子尺覆盖层独立于 SVG 渲染，避免拖拽时重复计算路径。 -->
+    <AverageTemplateRulerOverlay
+      :ruler-enabled="rulerEnabled"
+      :speed="speed"
+      :gain="gain"
+      :has-wave-data="hasWaveData"
+      :wave-key="waveKey"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onUnmounted, ref } from "vue";
 import {
   AVERAGE_TEMPLATE_CHART_SIZE,
   AVERAGE_TEMPLATE_MARKERS,
@@ -162,10 +198,13 @@ import {
   getAverageTemplatePixelsPerMv,
   getAverageTemplatePixelsPerSecond,
 } from "../utils/averageTemplateChartConfig";
+import AverageTemplateRulerOverlay from "./AverageTemplateRulerOverlay.vue";
 
 defineOptions({
   name: "AverageTemplateChart",
 });
+
+const emit = defineEmits(["update-marker"]);
 
 const GRID_RENDER_PRESET_DOTTED_SMALL = "dotted-small";
 const DEFAULT_CHART_BACKGROUND_COLOR = "#FFFCFC";
@@ -195,10 +234,15 @@ const props = defineProps({
     type: Object,
     default: () => ({
       focusLead: "II",
+      focusMarkers: {},
       lines: [],
     }),
   },
   overlayCompare: {
+    type: Boolean,
+    default: false,
+  },
+  rulerEnabled: {
     type: Boolean,
     default: false,
   },
@@ -214,6 +258,17 @@ const props = defineProps({
 
 const chartSize = AVERAGE_TEMPLATE_CHART_SIZE;
 const plotArea = AVERAGE_TEMPLATE_PLOT_AREA;
+const svgRef = ref(null);
+const activeMarkerSourceKey = ref("");
+const svgCursorStyle = computed(() => ({
+  cursor: activeMarkerSourceKey.value ? "grabbing" : undefined,
+}));
+
+let draggingMarkerSourceKey = "";
+let draggingPointerId = null;
+let cachedSvgRect = null;
+let pendingMarkerUpdate = null;
+let rafId = null;
 
 const gridRenderPreset = computed(
   () => props.appearanceSettings?.gridRenderPreset || "dotted-small",
@@ -296,18 +351,22 @@ const smallGridDots = computed(() => {
 
   return dots;
 });
-const resolvedSampleRate = computed(() =>
-  Number.isFinite(Number(props.sampleRate)) && Number(props.sampleRate) > 0
-    ? Number(props.sampleRate)
-    : AVERAGE_TEMPLATE_SAMPLE_RATE,
-);
 
 const waveMetrics = computed(() => {
   const lines = props.wavePayload?.lines || [];
   const primaryLine = lines.find((line) => line.isPrimary) || lines[0] || null;
+  const sampleRate = Math.max(
+    1,
+    Number(
+      primaryLine?.sampleRate ||
+        props.wavePayload?.sampleRate ||
+        props.sampleRate ||
+        AVERAGE_TEMPLATE_SAMPLE_RATE,
+    ) || AVERAGE_TEMPLATE_SAMPLE_RATE,
+  );
   const sampleCount = Math.max(primaryLine?.wave?.length || 0, 2);
   const pixelsPerSecond = getAverageTemplatePixelsPerSecond(props.speed);
-  const pixelsPerSample = pixelsPerSecond / resolvedSampleRate.value;
+  const pixelsPerSample = pixelsPerSecond / sampleRate;
   const startX = plotArea.left + AVERAGE_TEMPLATE_WAVE_LAYOUT.startPadding;
   const renderEndX = plotArea.right - AVERAGE_TEMPLATE_WAVE_LAYOUT.trailingPadding;
   const rawWaveWidth = Math.max(
@@ -346,6 +405,7 @@ const waveMetrics = computed(() => {
 
   return {
     sampleCount,
+    sampleRate,
     pixelsPerSample,
     amplitudeScale,
     startX,
@@ -358,18 +418,172 @@ const waveMetrics = computed(() => {
 const markerPositions = computed(() => {
   const { sampleCount, pixelsPerSample, startX, dataEndX } = waveMetrics.value;
   const maxIndex = Math.max(0, sampleCount - 1);
+  const focusMarkers = props.wavePayload?.focusMarkers || {};
 
   return (props.markers || []).map((marker) => {
-    const sampleIndex = Math.round(maxIndex * marker.ratio);
+    const markerIndex = Number(focusMarkers?.[marker.sourceKey]?.index);
+    const sampleIndex = Number.isFinite(markerIndex)
+      ? Math.min(maxIndex, Math.max(0, Math.round(markerIndex)))
+      : Math.round(maxIndex * marker.ratio);
     const markerX = Math.min(dataEndX, startX + sampleIndex * pixelsPerSample);
 
     return {
       ...marker,
+      sampleIndex,
+      hitWidth: Math.max(marker.width + 16, 28),
       x: markerX,
       labelY: AVERAGE_TEMPLATE_WAVE_LAYOUT.markerLabelY,
     };
   });
 });
+
+function clearMarkerDragFrame() {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+
+  pendingMarkerUpdate = null;
+}
+
+function getSvgLogicalX(clientX) {
+  const svgElement = svgRef.value;
+  if (!svgElement) {
+    return null;
+  }
+
+  cachedSvgRect = cachedSvgRect || svgElement.getBoundingClientRect();
+  if (!cachedSvgRect?.width) {
+    return null;
+  }
+
+  return ((clientX - cachedSvgRect.left) / cachedSvgRect.width) * chartSize.width;
+}
+
+function getMarkerOrderBounds(markerSourceKey) {
+  const markerIndex = markerPositions.value.findIndex(
+    (marker) => marker.sourceKey === markerSourceKey,
+  );
+  const maxIndex = Math.max(0, waveMetrics.value.sampleCount - 1);
+
+  if (markerIndex === -1) {
+    return {
+      minIndex: 0,
+      maxIndex,
+    };
+  }
+
+  const previousMarker = markerPositions.value[markerIndex - 1];
+  const nextMarker = markerPositions.value[markerIndex + 1];
+  return {
+    minIndex: previousMarker?.sampleIndex ?? 0,
+    maxIndex: nextMarker?.sampleIndex ?? maxIndex,
+  };
+}
+
+function clampMarkerSampleIndex(markerSourceKey, sampleIndex) {
+  const maxIndex = Math.max(0, waveMetrics.value.sampleCount - 1);
+  const { minIndex, maxIndex: nextMaxIndex } = getMarkerOrderBounds(
+    markerSourceKey,
+  );
+
+  return Math.min(
+    nextMaxIndex,
+    Math.max(minIndex, Math.min(maxIndex, Math.round(sampleIndex))),
+  );
+}
+
+function emitMarkerUpdate(markerSourceKey, sampleIndex) {
+  emit("update-marker", {
+    leadName: props.lead,
+    markerSourceKey,
+    sampleIndex,
+  });
+}
+
+function scheduleMarkerUpdate(markerSourceKey, sampleIndex) {
+  pendingMarkerUpdate = {
+    markerSourceKey,
+    sampleIndex,
+  };
+  if (rafId !== null) {
+    return;
+  }
+
+  rafId = requestAnimationFrame(() => {
+    const nextUpdate = pendingMarkerUpdate;
+    rafId = null;
+    pendingMarkerUpdate = null;
+    if (!nextUpdate) {
+      return;
+    }
+
+    emitMarkerUpdate(nextUpdate.markerSourceKey, nextUpdate.sampleIndex);
+  });
+}
+
+function handleMarkerPointerDown(marker, event) {
+  if (props.rulerEnabled || !hasWaveData.value) {
+    return;
+  }
+
+  const svgElement = svgRef.value;
+  if (!svgElement) {
+    return;
+  }
+
+  draggingMarkerSourceKey = marker.sourceKey;
+  draggingPointerId = event.pointerId;
+  activeMarkerSourceKey.value = marker.sourceKey;
+  cachedSvgRect = svgElement.getBoundingClientRect();
+  svgElement.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function handleMarkerPointerMove(event) {
+  if (!draggingMarkerSourceKey || event.pointerId !== draggingPointerId) {
+    return;
+  }
+
+  const logicalX = getSvgLogicalX(event.clientX);
+  if (logicalX === null) {
+    return;
+  }
+
+  const nextIndex = clampMarkerSampleIndex(
+    draggingMarkerSourceKey,
+    (logicalX - waveMetrics.value.startX) / waveMetrics.value.pixelsPerSample,
+  );
+  scheduleMarkerUpdate(draggingMarkerSourceKey, nextIndex);
+}
+
+function finishMarkerDrag(event, shouldClearFrame = true) {
+  if (!draggingMarkerSourceKey || event.pointerId !== draggingPointerId) {
+    return;
+  }
+
+  const svgElement = svgRef.value;
+  if (svgElement?.hasPointerCapture?.(event.pointerId)) {
+    svgElement.releasePointerCapture(event.pointerId);
+  }
+
+  if (shouldClearFrame) {
+    clearMarkerDragFrame();
+  }
+
+  draggingMarkerSourceKey = "";
+  draggingPointerId = null;
+  cachedSvgRect = null;
+  activeMarkerSourceKey.value = "";
+}
+
+function handleMarkerPointerUp(event) {
+  finishMarkerDrag(event, false);
+}
+
+function handleMarkerPointerCancel(event) {
+  finishMarkerDrag(event, true);
+}
 
 function buildPath(points) {
   if (!Array.isArray(points) || points.length === 0) {
@@ -412,12 +626,30 @@ const chartLines = computed(() =>
     strokeWidth: line.isPrimary ? 1.35 : props.overlayCompare ? 1.1 : 1,
   })),
 );
+const hasWaveData = computed(() =>
+  (props.wavePayload?.lines || []).some(
+    (line) => Array.isArray(line?.wave) && line.wave.length > 1,
+  ),
+);
+const waveKey = computed(() =>
+  [
+    props.wavePayload?.focusLead || props.lead,
+    ...((props.wavePayload?.lines || []).map(
+      (line) => `${line.id}:${Array.isArray(line.wave) ? line.wave.length : 0}`,
+    )),
+  ].join("|"),
+);
 
 const leadDisplayLabel = computed(() => props.lead);
+
+onUnmounted(() => {
+  clearMarkerDragFrame();
+});
 </script>
 
 <style lang="scss" scoped>
 .average-template-chart {
+  position: relative;
   width: 100%;
   height: 100%;
   background: #fffdfd;
@@ -443,6 +675,19 @@ const leadDisplayLabel = computed(() => props.lead);
     width: 1373px;
     height: 841px;
     display: block;
+  }
+
+  &__marker {
+    cursor: grab;
+  }
+
+  &__marker--dragging {
+    cursor: grabbing;
+
+    text {
+      fill: #1f9b67;
+      font-weight: 600;
+    }
   }
 }
 </style>

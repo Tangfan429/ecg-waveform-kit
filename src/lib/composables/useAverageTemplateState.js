@@ -3,7 +3,6 @@ import {
   AVERAGE_TEMPLATE_DEFAULT_LEAD,
   AVERAGE_TEMPLATE_LEAD_OPTIONS,
   AVERAGE_TEMPLATE_LINE_LEADS,
-  getAverageTemplateDisplayLead,
 } from "../utils/averageTemplateMock";
 import {
   AVERAGE_TEMPLATE_GAIN_OPTIONS,
@@ -34,6 +33,10 @@ export function useAverageTemplateState(options = {}) {
       return requestedDefaultLead;
     }
 
+    if (lineLeadValues.value.includes(AVERAGE_TEMPLATE_DEFAULT_LEAD)) {
+      return AVERAGE_TEMPLATE_DEFAULT_LEAD;
+    }
+
     return lineLeadValues.value[0] || AVERAGE_TEMPLATE_DEFAULT_LEAD;
   });
   const gain = ref("100");
@@ -43,9 +46,21 @@ export function useAverageTemplateState(options = {}) {
   const allSelected = ref(false);
   const overlayCompare = ref(false);
 
-  const displayLead = computed(() =>
-    getAverageTemplateDisplayLead(currentLead.value),
-  );
+  const displayLead = computed(() => {
+    if (allSelected.value && lineLeadValues.value.includes(defaultLead.value)) {
+      return defaultLead.value;
+    }
+
+    if (lineLeadValues.value.includes(currentLead.value)) {
+      return currentLead.value;
+    }
+
+    const selectedLeadSet = new Set(selectedLeads.value);
+    return (
+      lineLeadValues.value.find((leadValue) => selectedLeadSet.has(leadValue)) ||
+      defaultLead.value
+    );
+  });
 
   watch(
     [defaultLead, lineLeadValues],
@@ -67,6 +82,7 @@ export function useAverageTemplateState(options = {}) {
       }
 
       if (allSelected.value) {
+        currentLead.value = nextDefaultLead;
         selectedLeads.value = [...nextLeadValues];
       }
     },
@@ -75,6 +91,7 @@ export function useAverageTemplateState(options = {}) {
 
   const selectLead = (leadValue) => {
     if (leadValue === "ALL") {
+      currentLead.value = defaultLead.value;
       allSelected.value = true;
       selectedLeads.value = [...lineLeadValues.value];
       return;

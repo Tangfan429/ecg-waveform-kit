@@ -31,6 +31,18 @@
             @sync-window-change="handleSyncWindowChange"
           />
 
+          <!-- Keep the measurement overlay separate from the canvas renderer. -->
+          <WaveformRulerOverlay
+            ref="rulerOverlayRef"
+            :enabled="rulerEnabled"
+            :geometry="waveformGeometry"
+            :speed="speed"
+            :gain="gain"
+            :zoom-scale="zoomScale"
+            :width="canvasWidth"
+            :height="canvasHeight"
+          />
+
           <WaveformParallelRulerOverlay
             ref="parallelRulerOverlayRef"
             :visible="parallelRulerActive"
@@ -64,6 +76,7 @@ import { generateAllLeadsWaveform } from "../../utils/mockWaveformData";
 import { getLayoutConfig } from "../../utils/waveformLayouts";
 import WaveformParallelRulerOverlay from "./WaveformParallelRulerOverlay.vue";
 import WaveformRhythmNavigatorOverlay from "./WaveformRhythmNavigatorOverlay.vue";
+import WaveformRulerOverlay from "./WaveformRulerOverlay.vue";
 
 defineOptions({
   name: "ECGWaveform",
@@ -119,6 +132,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  rulerEnabled: {
+    type: Boolean,
+    default: false,
+  },
   zoom: {
     type: Number,
     default: 100,
@@ -140,6 +157,7 @@ const emit = defineEmits([
 const scrollRef = ref(null);
 const containerRef = ref(null);
 const parallelRulerOverlayRef = useTemplateRef("parallelRulerOverlayRef");
+const rulerOverlayRef = useTemplateRef("rulerOverlayRef");
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
 const currentWaveformData = ref(null);
@@ -472,6 +490,9 @@ defineExpose({
   },
   clearParallelRulers() {
     parallelRulerOverlayRef.value?.clearRulers();
+  },
+  clearRuler() {
+    rulerOverlayRef.value?.clearRuler();
   },
   setWaveformData(waveformData) {
     currentWaveformData.value = waveformData;

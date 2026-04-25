@@ -8,26 +8,33 @@
         :selected-leads="selectedLeads"
         :all-selected="allSelected"
         :overlay-compare="overlayCompare"
+        :ruler-active="isRulerEnabled"
+        :measurement-action-disabled="!hasTemplateData"
+        :export-disabled="!hasExportableMeasurementData"
         :lead-options="leadOptions"
         :show-overlay-compare="showOverlayCompare"
         @update:gain="handleGainChange"
         @update:speed="handleSpeedChange"
         @select-lead="handleLeadSelect"
         @update:overlay-compare="handleOverlayCompareChange"
-        @placeholder-action="handlePlaceholderAction"
+        @toggle-ruler="handleToggleRuler"
+        @open-measurement-data-dialog="handleOpenMeasurementDataDialog"
+        @export-measurement="handleExportMeasurement"
         @reset="handleReset"
       />
 
       <div class="average-template-workspace__chart-shell">
         <AverageTemplateChart
-          :lead="currentLead"
+          :lead="displayLead"
           :gain="gain"
           :speed="speed"
           :wave-payload="chartPayload"
           :sample-rate="props.analysisData?.sampleRate"
           :overlay-compare="overlayCompare"
+          :ruler-enabled="isRulerEnabled"
           :appearance-settings="props.appearanceSettings"
           :markers="markerDefinitions"
+          @update-marker="handleMarkerUpdate"
         />
       </div>
     </div>
@@ -44,7 +51,7 @@
 
     <AverageTemplateMeasurementPanel
       v-if="!isPanelDrawerMode"
-      :lead="currentLead"
+      :lead="displayLead"
       :rows="measurementRows"
     />
 
@@ -59,23 +66,34 @@
       @close="closeDiagnosisPanel"
     >
       <AverageTemplateMeasurementPanel
-        :lead="currentLead"
+        :lead="displayLead"
         :rows="measurementRows"
         class="average-template-workspace__drawer-panel"
       />
     </el-drawer>
+
+    <AverageTemplateMeasurementDataDialog
+      v-model="measurementDataDialogVisible"
+      :columns="measurementTableColumns"
+      :rows="measurementDataTableRows"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { ElMessage } from "element-plus";
+import { computed, ref, watch } from "vue";
 import { useDiagnosisLayout } from "../composables/useDiagnosisLayout";
 import { useAverageTemplateState } from "../composables/useAverageTemplateState";
+import { AVERAGE_TEMPLATE_MARKERS } from "../utils/averageTemplateChartConfig";
 import {
-  getAverageTemplateMeasurementRows,
-  getAverageTemplateWavePayload,
+  buildAverageTemplateMeasurementRowsFromLeadState,
+  buildAverageTemplateWavePayloadFromLeadStateMap,
+  createAverageTemplateLeadStateMap,
+  updateAverageTemplateLeadStateMarker,
 } from "../utils/averageTemplateMock";
 import AverageTemplateChart from "./AverageTemplateChart.vue";
+import AverageTemplateMeasurementDataDialog from "./AverageTemplateMeasurementDataDialog.vue";
 import AverageTemplateMeasurementPanel from "./AverageTemplateMeasurementPanel.vue";
 import AverageTemplateToolbar from "./AverageTemplateToolbar.vue";
 
@@ -108,14 +126,19 @@ const uiText = {
   measurementPanel: "测量参数",
 };
 
+const isRulerEnabled = ref(false);
+const measurementDataDialogVisible = ref(false);
+
 const {
   gain,
   speed,
   currentLead,
+  displayLead,
   selectedLeads,
   allSelected,
   overlayCompare,
   leadOptions,
+  lineLeadValues,
   selectLead,
   setOverlayCompare,
   resetControls,
@@ -124,9 +147,33 @@ const {
   defaultLead: computed(() => props.analysisData?.defaultLead),
 });
 
+const usingStaticLeadState = computed(() => !props.analysisData?.wavesByLead);
+const staticLeadStateMap = ref({});
+
+const resetStaticLeadStateMap = () => {
+  staticLeadStateMap.value = createAverageTemplateLeadStateMap(
+    lineLeadValues.value,
+    props.analysisData?.sampleRate,
+  );
+};
+
+watch(
+  [lineLeadValues, () => props.analysisData?.sampleRate, usingStaticLeadState],
+  ([, , isStaticMode]) => {
+    if (isStaticMode) {
+      resetStaticLeadStateMap();
+    }
+  },
+  { immediate: true },
+);
+
 const chartPayload = computed(() => {
-  if (!props.analysisData?.wavesByLead) {
-    return getAverageTemplateWavePayload(currentLead.value, selectedLeads.value);
+  if (usingStaticLeadState.value) {
+    return buildAverageTemplateWavePayloadFromLeadStateMap(
+      staticLeadStateMap.value,
+      displayLead.value,
+      selectedLeads.value,
+    );
   }
 
   const selectedDisplayLeads = selectedLeads.value.filter((leadValue) =>
@@ -134,41 +181,147 @@ const chartPayload = computed(() => {
   );
   const safeDisplayLeads = selectedDisplayLeads.length
     ? selectedDisplayLeads
-    : [props.analysisData.defaultLead || currentLead.value];
-  const focusLead = safeDisplayLeads.includes(currentLead.value)
-    ? currentLead.value
-    : safeDisplayLeads[safeDisplayLeads.length - 1];
+    : [props.analysisData.defaultLead || displayLead.value];
+  const focusLead = safeDisplayLeads.includes(displayLead.value)
+    ? displayLead.value
+    : safeDisplayLeads[0];
 
   return {
     focusLead,
+    focusMarkers: {},
+    sampleRate: props.analysisData?.sampleRate,
     lines: safeDisplayLeads
       .map((leadValue) => ({
         id: leadValue,
         lead: leadValue,
         isPrimary: leadValue === focusLead,
         wave: props.analysisData.wavesByLead?.[leadValue] || [],
+        sampleRate: props.analysisData?.sampleRate,
       }))
       .sort((left, right) => Number(left.isPrimary) - Number(right.isPrimary)),
   };
 });
 
 const measurementRows = computed(() => {
-  if (!props.analysisData?.measurementRowsByLead) {
-    return getAverageTemplateMeasurementRows(currentLead.value);
+  if (usingStaticLeadState.value) {
+    return buildAverageTemplateMeasurementRowsFromLeadState(
+      staticLeadStateMap.value?.[displayLead.value],
+    );
   }
 
-  return props.analysisData.measurementRowsByLead?.[currentLead.value] || [];
+  return props.analysisData?.measurementRowsByLead?.[displayLead.value] || [];
 });
 
-const markerDefinitions = computed(() => props.analysisData?.markers || []);
+const markerDefinitions = computed(() =>
+  Array.isArray(props.analysisData?.markers) && props.analysisData.markers.length
+    ? props.analysisData.markers
+    : AVERAGE_TEMPLATE_MARKERS,
+);
+const hasTemplateData = computed(() =>
+  chartPayload.value.lines.some(
+    (line) => Array.isArray(line?.wave) && line.wave.length > 1,
+  ),
+);
 const showOverlayCompare = computed(
   () =>
     Array.isArray(leadOptions.value) &&
     leadOptions.value.filter((item) => item?.value !== "ALL").length > 1,
 );
+const hasExportableMeasurementData = computed(
+  () =>
+    hasTemplateData.value &&
+    measurementRows.value.some((row) => String(row?.value ?? "").trim() !== "--"),
+);
+const measurementTableColumns = computed(() =>
+  lineLeadValues.value.map((leadValue) => ({
+    key: leadValue,
+    label:
+      leadOptions.value.find((item) => item?.value === leadValue)?.label || leadValue,
+  })),
+);
 
-const handlePlaceholderAction = (action) => {
-  emit("toolbar-action", { action });
+const buildMeasurementDataTableRows = (rowResolver) => {
+  const rowMap = new Map();
+
+  measurementTableColumns.value.forEach((column) => {
+    rowResolver(column.key).forEach((row, index) => {
+      const label = String(row?.label ?? "").trim() || `指标${index + 1}`;
+
+      if (!rowMap.has(label)) {
+        rowMap.set(label, {
+          label,
+          values: {},
+        });
+      }
+
+      rowMap.get(label).values[column.key] =
+        String(row?.value ?? "").trim() || "--";
+    });
+  });
+
+  return Array.from(rowMap.values()).map((row) => ({
+    label: row.label,
+    cells: measurementTableColumns.value.map(
+      (column) => row.values[column.key] || "--",
+    ),
+  }));
+};
+
+const measurementDataTableRows = computed(() => {
+  if (usingStaticLeadState.value) {
+    return buildMeasurementDataTableRows((leadKey) =>
+      buildAverageTemplateMeasurementRowsFromLeadState(
+        staticLeadStateMap.value?.[leadKey],
+      ),
+    );
+  }
+
+  return buildMeasurementDataTableRows(
+    (leadKey) => props.analysisData?.measurementRowsByLead?.[leadKey] || [],
+  );
+});
+
+watch(hasTemplateData, (nextValue) => {
+  if (!nextValue) {
+    isRulerEnabled.value = false;
+    measurementDataDialogVisible.value = false;
+  }
+});
+
+const escapeCsvValue = (value) =>
+  `"${String(value ?? "").replaceAll('"', '""')}"`;
+
+const buildMeasurementCsv = () => {
+  const headerRows = [
+    ["导联", displayLead.value],
+    ["导出时间", new Date().toLocaleString()],
+    [],
+    ["指标", "数值"],
+  ];
+  const bodyRows = measurementRows.value.map((row) => [row.label, row.value]);
+
+  return (
+    "\uFEFF" +
+    [...headerRows, ...bodyRows]
+      .map((row) => row.map(escapeCsvValue).join(","))
+      .join("\n")
+  );
+};
+
+const downloadCsv = (content, fileName) => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  const blob = new Blob([content], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const objectUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  anchor.click();
+  window.URL.revokeObjectURL(objectUrl);
 };
 
 const handleGainChange = (value) => {
@@ -187,8 +340,69 @@ const handleOverlayCompareChange = (value) => {
   setOverlayCompare(value);
 };
 
+const handleMarkerUpdate = ({ leadName, markerSourceKey, sampleIndex }) => {
+  if (!usingStaticLeadState.value) {
+    return;
+  }
+
+  const currentLeadState = staticLeadStateMap.value?.[leadName];
+  if (!currentLeadState) {
+    return;
+  }
+
+  staticLeadStateMap.value = {
+    ...staticLeadStateMap.value,
+    [leadName]: updateAverageTemplateLeadStateMarker(
+      currentLeadState,
+      markerSourceKey,
+      sampleIndex,
+    ),
+  };
+};
+
+const handleToggleRuler = () => {
+  if (!hasTemplateData.value) {
+    ElMessage.warning("当前暂无可测量的平均模板波形");
+    return;
+  }
+
+  isRulerEnabled.value = !isRulerEnabled.value;
+  emit("toolbar-action", {
+    action: "ruler",
+    active: isRulerEnabled.value,
+  });
+  ElMessage.success(isRulerEnabled.value ? "电子尺已开启" : "电子尺已关闭");
+};
+
+const handleOpenMeasurementDataDialog = () => {
+  if (!hasTemplateData.value) {
+    ElMessage.warning("当前暂无平均模板数据");
+    return;
+  }
+
+  measurementDataDialogVisible.value = true;
+  emit("toolbar-action", { action: "measurement" });
+};
+
+const handleExportMeasurement = () => {
+  if (!hasExportableMeasurementData.value) {
+    ElMessage.warning("当前暂无可导出的测量数据");
+    return;
+  }
+
+  downloadCsv(
+    buildMeasurementCsv(),
+    `average-template-${displayLead.value || "lead"}.csv`,
+  );
+  emit("toolbar-action", { action: "export" });
+  ElMessage.success("测量数据已导出");
+};
+
 const handleReset = () => {
   resetControls();
+  resetStaticLeadStateMap();
+  isRulerEnabled.value = false;
+  measurementDataDialogVisible.value = false;
   emit("reset");
 };
 </script>

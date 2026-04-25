@@ -54,22 +54,28 @@
 
     <div class="average-template-toolbar__right">
       <el-button
-        class="average-template-toolbar__primary-btn"
-        @click="emit('placeholder-action', 'ruler')"
+        :class="[
+          'average-template-toolbar__primary-btn',
+          { 'average-template-toolbar__primary-btn--active': rulerActive },
+        ]"
+        :disabled="measurementActionDisabled"
+        @click="emit('toggle-ruler')"
       >
         {{ uiText.ruler }}
       </el-button>
 
       <el-button
         class="average-template-toolbar__primary-btn"
-        @click="emit('placeholder-action', 'measurement')"
+        :disabled="measurementActionDisabled"
+        @click="emit('open-measurement-data-dialog')"
       >
         {{ uiText.measurement }}
       </el-button>
 
       <el-button
         class="average-template-toolbar__outline-btn"
-        @click="emit('placeholder-action', 'export')"
+        :disabled="exportDisabled"
+        @click="emit('export-measurement')"
       >
         {{ uiText.exportMeasurement }}
       </el-button>
@@ -120,6 +126,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  rulerActive: {
+    type: Boolean,
+    default: false,
+  },
+  measurementActionDisabled: {
+    type: Boolean,
+    default: false,
+  },
+  exportDisabled: {
+    type: Boolean,
+    default: false,
+  },
   leadOptions: {
     type: Array,
     default: () => AVERAGE_TEMPLATE_LEAD_OPTIONS,
@@ -135,7 +153,9 @@ const emit = defineEmits([
   "update:speed",
   "select-lead",
   "update:overlay-compare",
-  "placeholder-action",
+  "toggle-ruler",
+  "open-measurement-data-dialog",
+  "export-measurement",
   "reset",
 ]);
 
@@ -244,6 +264,12 @@ const isLeadActive = (leadValue) => {
       color: $text-white-90;
       background-color: $brand-6-hover;
       border-color: $brand-6-hover;
+    }
+
+    &--active {
+      background-color: $brand-6-hover;
+      border-color: $brand-6-hover;
+      box-shadow: 0 10px 22px rgba(52, 95, 221, 0.2);
     }
   }
 

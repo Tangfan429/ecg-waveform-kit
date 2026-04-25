@@ -91,6 +91,15 @@
           </div>
         </el-tooltip>
 
+        <template v-if="showCompare">
+          <div class="tool-divider"></div>
+
+          <div class="tool-btn" @click="handleCompare">
+            <el-icon><Document /></el-icon>
+            <span>病例比较</span>
+          </div>
+        </template>
+
         <div class="tool-divider"></div>
 
         <div class="tool-btn" @click="handleReanalyze">
@@ -148,6 +157,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import {
+  Document,
   FullScreen,
   Minus,
   Plus,
@@ -197,6 +207,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  showCompare: {
+    type: Boolean,
+    default: false,
+  },
   zoom: {
     type: Number,
     default: 100,
@@ -209,6 +223,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   "ruler",
+  "compare",
   "lead-switch",
   "lead-mode-change",
   "reanalyze",
@@ -306,6 +321,10 @@ watch(
 
 const handleRuler = () => {
   emit("ruler");
+};
+
+const handleCompare = () => {
+  emit("compare");
 };
 
 const handleLeadModeChange = (value) => {
