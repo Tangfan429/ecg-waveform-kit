@@ -29,6 +29,18 @@ export const LAYOUT_CONFIGS = {
     leads: [['I']],
     rhythmLeads: []
   },
+  'rhythm-single': {
+    columns: 1,
+    rows: 1,
+    leads: [['II']],
+    rhythmLeads: []
+  },
+  'rhythm-triple': {
+    columns: 1,
+    rows: 3,
+    leads: [['II'], ['V1'], ['V5']],
+    rhythmLeads: []
+  },
   '12x1': {
     columns: 1,
     rows: 12,

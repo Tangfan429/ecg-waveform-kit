@@ -519,7 +519,10 @@ async function handleDeleteHistoryRecord(recordId) {
               {{ currentDataSourceLabel }}
             </strong>
           </div>
-          <div class="app-shell__summary-card">
+          <div
+            v-if="analysisType !== 'rhythm'"
+            class="app-shell__summary-card"
+          >
             <span class="app-shell__summary-label">导联</span>
             <strong class="app-shell__summary-value">
               {{ currentLeadMode.shortLabel }}
@@ -567,7 +570,10 @@ async function handleDeleteHistoryRecord(recordId) {
         </div>
       </div>
 
-      <div class="app-shell__choice-block">
+      <div
+        v-if="analysisType !== 'rhythm'"
+        class="app-shell__choice-block"
+      >
         <div class="app-shell__choice-title">导联模式</div>
         <div class="app-shell__choice-grid">
           <button

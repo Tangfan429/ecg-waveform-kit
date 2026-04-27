@@ -5,8 +5,8 @@ import AnalysisTypeTabs from "./AnalysisTypeTabs.vue";
 import AverageTemplateWorkspace from "./AverageTemplateWorkspace.vue";
 import HighFrequencyEcgWorkspace from "./HighFrequencyEcgWorkspace.vue";
 import QtDispersionWorkspace from "./QtDispersionWorkspace.vue";
+import RhythmWaveformWorkspace from "./RhythmWaveformWorkspace.vue";
 import ReportWorkspace from "./ReportWorkspace.vue";
-import SingleLeadRhythmWorkspace from "./SingleLeadRhythmWorkspace.vue";
 import SpectrumAnalysisWorkspace from "./SpectrumAnalysisWorkspace.vue";
 import StandardWaveformWorkspace from "./StandardWaveformWorkspace.vue";
 import VectorEcgWorkspace from "./VectorEcgWorkspace.vue";
@@ -246,25 +246,14 @@ const handleExamModeChange = (mode) => {
         @print="$emit('print-standard', $event)"
       />
 
-      <SingleLeadRhythmWorkspace
-        v-else-if="isStandardExamMode && analysisTypeModel === 'rhythm' && rhythmAnalysis"
-        :analysis="rhythmAnalysis"
-      />
-
-      <StandardWaveformWorkspace
+      <RhythmWaveformWorkspace
         v-else-if="isStandardExamMode && analysisTypeModel === 'rhythm'"
-        :key="analysisTypeModel"
         :waveform-data="standardWaveformData"
         :sample-rate="standardSampleRate"
         :duration="standardDuration"
         :measurement-data="measurementData"
         :print-meta="standardPrintMeta"
-        :lead-mode="leadModeModel"
-        :lead-mode-options="leadModeOptions"
-        :initial-layout="standardInitialLayout"
-        @update:lead-mode="leadModeModel = $event"
         @toolbar-action="$emit('toolbar-action', $event)"
-        @print="$emit('print-standard', $event)"
       />
 
       <AverageTemplateWorkspace

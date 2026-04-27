@@ -50,6 +50,7 @@ const DEFAULT_CONFIG = {
   sampleRate: 500,
   duration: 10,
   displayMode: "sync",
+  showCalibrationForAllLeads: false,
   showRhythmLead: true,
   rhythmLeadName: "II",
   metricsBandHeight: 64,
@@ -873,7 +874,13 @@ export class ECGCanvasRenderer {
       region.labelY ?? region.centerY,
     );
 
-    if (!isLimbLead(region.leadName)) return;
+    // 节律页需要在 V1/V5 等胸导联旁也显示校准脉冲，因此支持配置强制全导联绘制。
+    if (
+      !this.config.showCalibrationForAllLeads &&
+      !isLimbLead(region.leadName)
+    ) {
+      return;
+    }
 
     const x = this.leadRegions.calibrationX;
     const y = region.centerY;
@@ -902,11 +909,17 @@ export class ECGCanvasRenderer {
 
     const ctx = this.ctx;
     const { waveStartX, waveEndX } = this.leadRegions;
-    const labelY = this.gridBounds.startY - this.config.smallGridSize;
+    const labelY = Math.max(
+      2,
+      this.gridBounds.startY -
+        this.config.largeGridSize +
+        this.config.smallGridSize,
+    );
 
     ctx.fillStyle = this.config.labelColor;
     ctx.font = this.config.labelFont;
-    ctx.textBaseline = "alphabetic";
+    // 顶部标签需要完整落在画布内，避免小 top padding 场景被裁切。
+    ctx.textBaseline = "top";
 
     // 左侧文本（时间）
     if (canvasTopLeftText) {

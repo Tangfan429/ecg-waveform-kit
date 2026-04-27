@@ -351,106 +351,248 @@ function computeSpectrumPoints(values, sampleRate) {
   });
 }
 
-function buildSpectrumData(values, sampleRate) {
+const WATCH_SPECTRUM_MODE_OPTIONS = Object.freeze([
+  { key: "dual-lead", label: "双导对应谱分析" },
+  { key: "twelve-lead", label: "12导联功率谱" },
+]);
+
+const WATCH_SPECTRUM_TWELVE_LEADS = Object.freeze([
+  "I",
+  "II",
+  "III",
+  "aVR",
+  "aVL",
+  "aVF",
+  "V1",
+  "V2",
+  "V3",
+  "V4",
+  "V5",
+  "V6",
+]);
+
+function resolveSpectrumYMax(points, fallback = 1000) {
+  const peakValue = points.reduce(
+    (maxValue, point) => Math.max(maxValue, Number(point?.amplitude || point?.y) || 0),
+    0,
+  );
+
+  if (!peakValue) {
+    return fallback;
+  }
+
+  const scaledValue = Math.ceil(peakValue * 1.08);
+  const magnitude = 10 ** Math.max(0, String(Math.floor(scaledValue)).length - 1);
+  return Math.ceil(scaledValue / magnitude) * magnitude;
+}
+
+function createEmptySpectrumPanel({
+  title,
+  yMin = 0,
+  yMax = 100,
+  yUnit = "",
+  xUnit = "Hz",
+  emptyLabel = "暂无数据",
+  emphasizeZeroLine = false,
+  notes = [],
+} = {}) {
+  return {
+    title,
+    xUnit,
+    yUnit,
+    xMin: 0,
+    xMax: 25,
+    yMin,
+    yMax,
+    yTickCount: yMin < 0 ? 3 : 2,
+    series: [],
+    notes,
+    emptyLabel,
+    emphasizeZeroLine,
+  };
+}
+
+function createSpectrumSeriesFromPoints(points, color = "#e8b66b") {
+  return [
+    {
+      color,
+      lineWidth: 0.95,
+      points: points.map((point) => ({
+        x: Number(point.frequency),
+        y: Number(point.amplitude),
+      })),
+    },
+  ];
+}
+
+function buildWatchSpectrumData(values, sampleRate) {
   const points = computeSpectrumPoints(values, sampleRate);
 
   if (!points.length) {
     return {
-      title: "频谱心电",
-      subtitle: "Lead I 频域分析将在拿到足够波形点后生成。",
-      activeLead: "I",
-      leadOptions: ["I"],
-      points: [],
-      bands: [],
-      summaryRows: [
-        { label: "状态", value: "等待足够波形数据" },
-      ],
-      markers: [],
+      modeOptions: WATCH_SPECTRUM_MODE_OPTIONS,
+      defaultMode: "twelve-lead",
+      dualLead: {
+        panels: {
+          phaseShift: createEmptySpectrumPanel({
+            title: "相移图(QXY)",
+            yMin: -180,
+            yMax: 180,
+            emptyLabel: "Lead I 数据源暂不支持双导相移图",
+            emphasizeZeroLine: true,
+            notes: ["D", "-", "PV", "-", "M", "-"],
+          }),
+          transferAmplitude: createEmptySpectrumPanel({
+            title: "幅频图(HXY)",
+            yMin: 0,
+            yMax: 5,
+            emptyLabel: "Lead I 数据源暂不支持双导幅频图",
+          }),
+          coherence: createEmptySpectrumPanel({
+            title: "相干函数(RF)",
+            yMin: 0,
+            yMax: 1,
+            emptyLabel: "Lead I 数据源暂不支持相干函数",
+            notes: ["Cp", "-", "CT", "-", "CbL", "-"],
+          }),
+          impulseResponse: createEmptySpectrumPanel({
+            title: "脉冲响应(PIH)",
+            yMin: -20,
+            yMax: 70,
+            emptyLabel: "Lead I 数据源暂不支持脉冲响应",
+            emphasizeZeroLine: true,
+            notes: ["PV", "-", "M", "-"],
+          }),
+          crossCorrelation: createEmptySpectrumPanel({
+            title: "互相关(VXY)",
+            yMin: -20,
+            yMax: 90,
+            emptyLabel: "Lead I 数据源暂不支持互相关",
+            emphasizeZeroLine: true,
+            notes: ["RV", "-", "RD", "-", "NW", "+"],
+          }),
+        },
+        powerChart: {
+          ...createEmptySpectrumPanel({
+            title: "功率谱图(V5-II)",
+            yMin: 0,
+            yMax: 4000,
+            yUnit: "pW",
+            emptyLabel: "Lead I 数据源暂不支持双导功率谱",
+            notes: ["1/2", "1-N", "5/10", "TU"],
+          }),
+          legendItems: [
+            { label: "V5", color: "#efb45e", markers: ["-", "-", "+", "-"] },
+            { label: "II", color: "#55c2d7", markers: ["-", "-", "+", "-"] },
+          ],
+        },
+      },
+      twelveLead: {
+        charts: WATCH_SPECTRUM_TWELVE_LEADS.map((leadName) =>
+          createEmptySpectrumPanel({
+            title: leadName,
+            yUnit: "pW",
+            yMin: 0,
+            yMax: leadName === "I" ? 1000 : 300,
+            emptyLabel:
+              leadName === "I"
+                ? "等待足够 Lead I 波形数据"
+                : "当前数据源无该导联",
+          }),
+        ),
+      },
     };
   }
 
-  const bandDefinitions = [
-    { label: "VLF", rangeLabel: "0-5Hz", min: 0, max: 5 },
-    { label: "LF", rangeLabel: "5-15Hz", min: 5, max: 15 },
-    { label: "MF", rangeLabel: "15-25Hz", min: 15, max: 25 },
-    { label: "HF", rangeLabel: "25-40Hz", min: 25, max: 40 },
-  ];
-  const totalAmplitude = points.reduce(
-    (sum, point) => sum + Math.max(0, point.amplitude),
-    0,
-  );
-  const bands = bandDefinitions.map((definition) => {
-    const bandAmplitude = points
-      .filter(
-        (point) =>
-          point.frequency >= definition.min && point.frequency < definition.max,
-      )
-      .reduce((sum, point) => sum + Math.max(0, point.amplitude), 0);
-
-    return {
-      label: definition.label,
-      range: definition.rangeLabel,
-      power:
-        totalAmplitude > 0
-          ? `${roundNumber((bandAmplitude / totalAmplitude) * 100, 1)}%`
-          : "--",
-      amplitude: bandAmplitude,
-    };
-  });
-  const sortedPeaks = points
-    .filter((point) => point.frequency > 0)
-    .sort((left, right) => right.amplitude - left.amplitude);
-  const mainPeak = sortedPeaks[0] || null;
-  const secondaryPeak = sortedPeaks[1] || null;
-  const spectrumCentroid =
-    totalAmplitude > 0
-      ? points.reduce(
-          (sum, point) => sum + point.frequency * Math.max(0, point.amplitude),
-          0,
-        ) / totalAmplitude
-      : 0;
-  const lowAmplitude = bands
-    .filter((band) => ["LF", "MF"].includes(band.label))
-    .reduce((sum, band) => sum + band.amplitude, 0);
-  const highAmplitude = bands.find((band) => band.label === "HF")?.amplitude || 0;
+  const leadIYMax = resolveSpectrumYMax(points, 1000);
 
   return {
-    title: "频谱心电",
-    subtitle: "对 Apple Watch Lead I 波形做简化频域分解，观察主频和能量带分布。",
-    activeLead: "I",
-    leadOptions: ["I"],
-    points,
-    bands: bands.map(({ amplitude, ...band }) => band),
-    summaryRows: [
-      {
-        label: "主峰频率",
-        value: mainPeak ? `${roundNumber(mainPeak.frequency, 1)}Hz` : "--",
+    modeOptions: WATCH_SPECTRUM_MODE_OPTIONS,
+    defaultMode: "twelve-lead",
+    dualLead: {
+      panels: {
+        phaseShift: createEmptySpectrumPanel({
+          title: "相移图(QXY)",
+          yMin: -180,
+          yMax: 180,
+          emptyLabel: "Apple Watch Lead I 暂不支持双导相移图",
+          emphasizeZeroLine: true,
+          notes: ["D", "-", "PV", "-", "M", "-"],
+        }),
+        transferAmplitude: createEmptySpectrumPanel({
+          title: "幅频图(HXY)",
+          yMin: 0,
+          yMax: 5,
+          emptyLabel: "Apple Watch Lead I 暂不支持双导幅频图",
+        }),
+        coherence: createEmptySpectrumPanel({
+          title: "相干函数(RF)",
+          yMin: 0,
+          yMax: 1,
+          emptyLabel: "Apple Watch Lead I 暂不支持相干函数",
+          notes: ["Cp", "-", "CT", "-", "CbL", "-"],
+        }),
+        impulseResponse: createEmptySpectrumPanel({
+          title: "脉冲响应(PIH)",
+          yMin: -20,
+          yMax: 70,
+          emptyLabel: "Apple Watch Lead I 暂不支持脉冲响应",
+          emphasizeZeroLine: true,
+          notes: ["PV", "-", "M", "-"],
+        }),
+        crossCorrelation: createEmptySpectrumPanel({
+          title: "互相关(VXY)",
+          yMin: -20,
+          yMax: 90,
+          emptyLabel: "Apple Watch Lead I 暂不支持互相关",
+          emphasizeZeroLine: true,
+          notes: ["RV", "-", "RD", "-", "NW", "+"],
+        }),
       },
-      {
-        label: "次峰频率",
-        value: secondaryPeak
-          ? `${roundNumber(secondaryPeak.frequency, 1)}Hz`
-          : "--",
+      powerChart: {
+        ...createEmptySpectrumPanel({
+          title: "功率谱图(V5-II)",
+          yMin: 0,
+          yMax: 4000,
+          yUnit: "pW",
+          emptyLabel: "Apple Watch Lead I 暂不支持双导功率谱",
+          notes: ["1/2", "1-N", "5/10", "TU"],
+        }),
+        legendItems: [
+          { label: "V5", color: "#efb45e", markers: ["-", "-", "+", "-"] },
+          { label: "II", color: "#55c2d7", markers: ["-", "-", "+", "-"] },
+        ],
       },
-      {
-        label: "频谱重心",
-        value: `${roundNumber(spectrumCentroid, 1)}Hz`,
-      },
-      {
-        label: "低/高频比",
-        value:
-          highAmplitude > 0
-            ? roundNumber(lowAmplitude / highAmplitude, 2).toFixed(2)
-            : "--",
-      },
-    ],
-    markers: [mainPeak, secondaryPeak]
-      .filter(Boolean)
-      .map((peak, index) => ({
-        label: index === 0 ? "主峰" : "次峰",
-        frequency: peak.frequency,
-      })),
+    },
+    twelveLead: {
+      charts: WATCH_SPECTRUM_TWELVE_LEADS.map((leadName) =>
+        leadName === "I"
+          ? {
+              title: "I",
+              xUnit: "Hz",
+              yUnit: "pW",
+              xMin: 0,
+              xMax: 25,
+              yMin: 0,
+              yMax: leadIYMax,
+              yTickCount: 2,
+              series: createSpectrumSeriesFromPoints(points),
+              emptyLabel: "",
+            }
+          : createEmptySpectrumPanel({
+              title: leadName,
+              yUnit: "pW",
+              yMin: 0,
+              yMax: 300,
+              emptyLabel: "当前数据源无该导联",
+            }),
+      ),
+    },
   };
+}
+
+function buildSpectrumData(values, sampleRate) {
+  return buildWatchSpectrumData(values, sampleRate);
 }
 
 function buildAverageTemplateRows({
