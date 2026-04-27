@@ -89,7 +89,7 @@ watch(
 .spectrum-analysis-workspace {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   height: 100%;
   min-height: 0;
   padding: 0;
@@ -98,38 +98,39 @@ watch(
   &__mode-switch {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 36px;
+    gap: 4px;
+    min-height: 54px;
+    padding: 8px 12px;
   }
 
   &__mode-button {
     min-width: 130px;
-    height: 36px;
-    padding: 0 18px;
-    border: 1px solid #d5dce8;
-    border-radius: 4px;
-    background: #f3f6fb;
-    color: #26384f;
+    height: 38px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 4px 4px 0 0;
+    background: #f3f3f3;
+    color: #666666;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 400;
     cursor: pointer;
     transition:
       background-color 0.2s ease,
-      border-color 0.2s ease,
       color 0.2s ease;
 
     &:hover {
-      border-color: #2f6fe4;
-      color: #2f6fe4;
+      background: #e9edfb;
+      color: #333333;
     }
 
     &--active {
-      border-color: #1f6ed4;
-      background: #1f6ed4;
-      color: #ffffff;
+      background: #d9e1ff;
+      color: #333333;
+      font-weight: 600;
 
       &:hover {
-        color: #ffffff;
+        background: #d9e1ff;
+        color: #333333;
       }
     }
   }

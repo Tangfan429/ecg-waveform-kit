@@ -99,6 +99,11 @@ const props = defineProps({
     default: "none",
     validator: (value) => ["none", "max"].includes(value),
   },
+  variant: {
+    type: String,
+    default: "default",
+    validator: (value) => ["default", "twelve-lead"].includes(value),
+  },
 });
 
 const canvasRef = useTemplateRef("canvasRef");
@@ -116,19 +121,38 @@ const CHART_COLORS = Object.freeze({
   background: "#ffffff",
 });
 
+const TWELVE_LEAD_CHART_COLORS = Object.freeze({
+  axis: "#5e5e5e",
+  zeroLine: "#5e5e5e",
+  text: "rgba(0, 0, 0, 0.9)",
+  mutedText: "rgba(0, 0, 0, 0.4)",
+  title: "rgba(0, 0, 0, 0.9)",
+  fallbackSeries: "#f7b900",
+  background: "#f8f8f8",
+});
+
+const chartColors = computed(() =>
+  props.variant === "twelve-lead" ? TWELVE_LEAD_CHART_COLORS : CHART_COLORS,
+);
+
 const chartPadding = computed(() => ({
-  top: props.axisDisplay === "baseline" ? 42 : 22,
+  // Figma's twelve-lead mini charts use a tighter plot box than the dual-lead panels.
+  top: props.variant === "twelve-lead" ? 29 : props.axisDisplay === "baseline" ? 42 : 22,
   right:
-    props.axisDisplay === "baseline"
+    props.variant === "twelve-lead"
+      ? 50
+      : props.axisDisplay === "baseline"
       ? 24
       : props.legendItems.length && props.legendLayout === "list"
         ? 128
         : props.legendLayout === "matrix"
           ? 220
           : 34,
-  bottom: props.axisDisplay === "baseline" ? 24 : 30,
+  bottom: props.variant === "twelve-lead" ? 33 : props.axisDisplay === "baseline" ? 24 : 30,
   left:
-    props.axisDisplay === "baseline"
+    props.variant === "twelve-lead"
+      ? 36
+      : props.axisDisplay === "baseline"
       ? 20
       : props.yUnit
         ? 58
@@ -185,8 +209,19 @@ function formatTickLabel(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+function getCanvasFont(size) {
+  return `${size}px ${FONT_FAMILY}`;
+}
+
+function resolveSeriesColor(series) {
+  return props.variant === "twelve-lead"
+    ? chartColors.value.fallbackSeries
+    : series.color || chartColors.value.fallbackSeries;
+}
+
 function drawAxes(ctx, layout) {
-  ctx.strokeStyle = CHART_COLORS.axis;
+  const colors = chartColors.value;
+  ctx.strokeStyle = colors.axis;
   ctx.lineWidth = 0.8;
   ctx.beginPath();
   ctx.moveTo(layout.plotLeft, layout.plotBottom + 0.5);
@@ -203,7 +238,7 @@ function drawZeroLine(ctx, layout, ySpan) {
 
   const zeroY =
     layout.plotBottom - ((0 - props.yMin) / ySpan) * layout.plotHeight;
-  ctx.strokeStyle = CHART_COLORS.zeroLine;
+  ctx.strokeStyle = chartColors.value.zeroLine;
   ctx.lineWidth = 0.8;
   ctx.beginPath();
   ctx.moveTo(layout.plotLeft, zeroY + 0.5);
@@ -212,8 +247,10 @@ function drawZeroLine(ctx, layout, ySpan) {
 }
 
 function drawTicks(ctx, layout, xSpan, ySpan) {
-  ctx.fillStyle = CHART_COLORS.text;
-  ctx.font = `10px ${FONT_FAMILY}`;
+  const colors = chartColors.value;
+  const fontSize = props.variant === "twelve-lead" ? 12 : 10;
+  ctx.fillStyle = colors.text;
+  ctx.font = getCanvasFont(fontSize);
   ctx.textBaseline = "middle";
   ctx.textAlign = "right";
 
@@ -226,7 +263,7 @@ function drawTicks(ctx, layout, xSpan, ySpan) {
     ctx.beginPath();
     ctx.moveTo(layout.plotLeft - 4, y + 0.5);
     ctx.lineTo(layout.plotLeft, y + 0.5);
-    ctx.strokeStyle = CHART_COLORS.axis;
+    ctx.strokeStyle = colors.axis;
     ctx.stroke();
     ctx.fillText(formatTickLabel(value), layout.plotLeft - 8, y);
   }
@@ -240,7 +277,7 @@ function drawTicks(ctx, layout, xSpan, ySpan) {
     ctx.beginPath();
     ctx.moveTo(x + 0.5, layout.plotBottom);
     ctx.lineTo(x + 0.5, layout.plotBottom + 4);
-    ctx.strokeStyle = CHART_COLORS.axis;
+    ctx.strokeStyle = colors.axis;
     ctx.stroke();
     ctx.textAlign = isFirstTick ? "left" : isLastTick ? "right" : "center";
     ctx.fillText(String(value), x, layout.plotBottom + 7);
@@ -253,8 +290,8 @@ function drawSeries(ctx, layout, normalizedSeries, xSpan, ySpan) {
       return;
     }
 
-    ctx.strokeStyle = series.color || CHART_COLORS.fallbackSeries;
-    ctx.lineWidth = series.lineWidth || 0.95;
+    ctx.strokeStyle = resolveSeriesColor(series);
+    ctx.lineWidth = props.variant === "twelve-lead" ? 1 : series.lineWidth || 0.95;
     ctx.beginPath();
 
     series.points.forEach((point, index) => {
@@ -325,8 +362,8 @@ function drawEmptyState(ctx, layout) {
     return;
   }
 
-  ctx.fillStyle = CHART_COLORS.mutedText;
-  ctx.font = `11px ${FONT_FAMILY}`;
+  ctx.fillStyle = chartColors.value.mutedText;
+  ctx.font = getCanvasFont(props.variant === "twelve-lead" ? 12 : 11);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(
@@ -337,21 +374,28 @@ function drawEmptyState(ctx, layout) {
 }
 
 function drawLabels(ctx, layout) {
-  ctx.fillStyle = CHART_COLORS.title;
-  ctx.font = `10px ${FONT_FAMILY}`;
+  const colors = chartColors.value;
+  const fontSize = props.variant === "twelve-lead" ? 12 : 10;
+  ctx.fillStyle = colors.title;
+  ctx.font = getCanvasFont(fontSize);
   ctx.textAlign = props.titleAlign === "right" ? "right" : "center";
   ctx.textBaseline = "top";
   ctx.fillText(
     props.title,
     props.titleAlign === "right" ? layout.width - 24 : layout.width / 2,
-    5,
+    props.variant === "twelve-lead" ? 8 : 5,
   );
 
   if (props.yUnit) {
     ctx.save();
-    ctx.translate(18, layout.plotTop + 13);
+    ctx.translate(
+      18,
+      props.variant === "twelve-lead"
+        ? layout.plotTop + layout.plotHeight / 2
+        : layout.plotTop + 13,
+    );
     ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = "left";
+    ctx.textAlign = props.variant === "twelve-lead" ? "center" : "left";
     ctx.textBaseline = "middle";
     ctx.fillText(props.yUnit, 0, 0);
     ctx.restore();
@@ -360,7 +404,12 @@ function drawLabels(ctx, layout) {
   if (props.xUnit) {
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    ctx.fillText(props.xUnit, layout.width - 8, layout.plotBottom + 7);
+    ctx.fillStyle = colors.text;
+    ctx.fillText(
+      props.xUnit,
+      props.variant === "twelve-lead" ? layout.plotRight + 20 : layout.width - 8,
+      props.variant === "twelve-lead" ? layout.plotBottom + 12 : layout.plotBottom + 7,
+    );
   }
 }
 
@@ -369,8 +418,8 @@ function drawNotes(ctx, layout) {
     return;
   }
 
-  ctx.fillStyle = CHART_COLORS.text;
-  ctx.font = `9px ${FONT_FAMILY}`;
+  ctx.fillStyle = chartColors.value.text;
+  ctx.font = getCanvasFont(9);
   ctx.textBaseline = "top";
 
   if (props.notesPlacement === "top-left") {
@@ -404,15 +453,15 @@ function drawLegend(ctx, layout) {
   let cursorY = 20;
   const legendX = layout.plotRight + 22;
   props.legendItems.forEach((item) => {
-    ctx.fillStyle = item.color || CHART_COLORS.fallbackSeries;
+    ctx.fillStyle = item.color || chartColors.value.fallbackSeries;
     ctx.fillRect(legendX, cursorY, 12, 12);
-    ctx.strokeStyle = item.color || CHART_COLORS.fallbackSeries;
+    ctx.strokeStyle = item.color || chartColors.value.fallbackSeries;
     ctx.lineWidth = 0.8;
     ctx.strokeRect(legendX, cursorY, 12, 12);
-    ctx.fillStyle = CHART_COLORS.text;
+    ctx.fillStyle = chartColors.value.text;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.font = `10px ${FONT_FAMILY}`;
+    ctx.font = getCanvasFont(10);
     ctx.fillText(item.label, legendX + 17, cursorY + 6);
     cursorY += 18;
   });
@@ -427,9 +476,9 @@ function drawMatrixLegend(ctx, layout) {
   const columnStartX = labelX + 36;
   const columnGap = 36;
 
-  ctx.font = `10px ${FONT_FAMILY}`;
+  ctx.font = getCanvasFont(10);
   ctx.textBaseline = "middle";
-  ctx.fillStyle = CHART_COLORS.text;
+  ctx.fillStyle = chartColors.value.text;
   props.notes.forEach((note, index) => {
     ctx.textAlign = "center";
     ctx.fillText(String(note), columnStartX + index * columnGap, headerY);
@@ -439,12 +488,12 @@ function drawMatrixLegend(ctx, layout) {
   // clinical marker states aligned under each marker header on the right.
   props.legendItems.forEach((item, rowIndex) => {
     const y = firstRowY + rowIndex * rowGap;
-    ctx.fillStyle = item.color || CHART_COLORS.fallbackSeries;
+    ctx.fillStyle = item.color || chartColors.value.fallbackSeries;
     ctx.fillRect(legendX, y - 7, 12, 12);
-    ctx.strokeStyle = item.color || CHART_COLORS.fallbackSeries;
+    ctx.strokeStyle = item.color || chartColors.value.fallbackSeries;
     ctx.lineWidth = 0.8;
     ctx.strokeRect(legendX, y - 7, 12, 12);
-    ctx.fillStyle = CHART_COLORS.text;
+    ctx.fillStyle = chartColors.value.text;
     ctx.textAlign = "left";
     ctx.fillText(item.label, labelX, y);
 
@@ -487,7 +536,7 @@ function renderCanvas() {
 
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = CHART_COLORS.background;
+  ctx.fillStyle = chartColors.value.background;
   ctx.fillRect(0, 0, width, height);
 
   if (props.axisDisplay === "full") {
@@ -556,6 +605,7 @@ watch(
     props.legendLayout,
     props.axisDisplay,
     props.peakMarker,
+    props.variant,
     props.emptyLabel,
     props.notes,
     props.legendItems,
