@@ -1,5 +1,9 @@
 import { dynamicBloodPressureReport, dynamicEcgReport } from "./reportAssets";
 import { ecgData } from "./sampleStandardEcg";
+import {
+  createHighFrequencyTemplateWaveform,
+  createRhythmStripWaveform,
+} from "../utils/highFrequencyEcg";
 import { createDiagnosisSampleViewModel } from "../utils/sampleDataAdapter";
 
 function createSpectrumSeries({
@@ -146,17 +150,22 @@ function createCrossCorrelationSeries() {
   });
 }
 
-const createHighFrequencySeries = (length = 180) =>
+const createHighFrequencySeries = (
+  length = 180,
+  { phaseOffset = 0, amplitude = 1, polarity = 1 } = {},
+) =>
   Array.from({ length }, (_, index) => {
-    const phase = index / 7.2;
-    const burst = Math.sin(index / 18) * 0.22 + 0.92;
+    const phase = (index + phaseOffset) / 7.2;
+    const burst = Math.sin((index + phaseOffset) / 18) * 0.22 + 0.92;
 
     return Number(
-      (
+      (polarity *
+        amplitude *
+        (
         Math.sin(phase * 2.8) * 0.82 * burst +
         Math.cos(phase * 1.4) * 0.28 +
         Math.sin(phase * 5.1) * 0.16
-      ).toFixed(4),
+        )).toFixed(4),
     );
   });
 
@@ -342,8 +351,29 @@ export const demoSpectrumAnalysis = Object.freeze({
 export const demoHighFrequencyEcg = Object.freeze({
   title: "高频心电",
   subtitle: "聚焦晚电位、高频碎裂及导联能量画像的复用工作台。",
-  activeLead: "V1",
+  activeLead: "II",
   riskLevel: "轻度异常",
+  controls: {
+    gain: "30mm/mV",
+    speed: "300mm/s",
+    leadGroup: "肢体导联",
+    activeLead: "II",
+  },
+  rhythmWaveform: createRhythmStripWaveform({ lead: "II" }),
+  highFrequencyLeads: [
+    { lead: "I", waveform: createHighFrequencyTemplateWaveform({ lead: "I" }) },
+    { lead: "II", waveform: createHighFrequencyTemplateWaveform({ lead: "II" }) },
+    { lead: "III", waveform: createHighFrequencyTemplateWaveform({ lead: "III" }) },
+    { lead: "aVR", waveform: createHighFrequencyTemplateWaveform({ lead: "aVR" }) },
+    { lead: "aVL", waveform: createHighFrequencyTemplateWaveform({ lead: "aVL" }) },
+    { lead: "aVF", waveform: createHighFrequencyTemplateWaveform({ lead: "aVF" }) },
+    { lead: "V1", waveform: createHighFrequencyTemplateWaveform({ lead: "V1" }) },
+    { lead: "V2", waveform: createHighFrequencyTemplateWaveform({ lead: "V2" }) },
+    { lead: "V3", waveform: createHighFrequencyTemplateWaveform({ lead: "V3" }) },
+    { lead: "V4", waveform: createHighFrequencyTemplateWaveform({ lead: "V4" }) },
+    { lead: "V5", waveform: createHighFrequencyTemplateWaveform({ lead: "V5" }) },
+    { lead: "V6", waveform: createHighFrequencyTemplateWaveform({ lead: "V6" }) },
+  ],
   leadProfiles: [
     { lead: "V1", energy: 88, rms40: 21, las40: 41 },
     { lead: "V2", energy: 76, rms40: 24, las40: 38 },
@@ -357,6 +387,11 @@ export const demoHighFrequencyEcg = Object.freeze({
     { label: "RMS40", value: "24μV" },
     { label: "LAS40", value: "38ms" },
     { label: "噪声水平", value: "0.34μV" },
+  ],
+  tableRows: [
+    { type: "N", I: 0, II: 0, III: 0, aVR: 0, aVL: 2, aVF: 0, V1: 0, V2: 0, V3: 0, V4: 0, V5: 0, V6: 0, total: 0 },
+    { type: "N", I: 0, II: 0, III: 0, aVR: 0, aVL: 2, aVF: 0, V1: 0, V2: 0, V3: 0, V4: 0, V5: 0, V6: 0, total: 0 },
+    { type: "N", I: 0, II: 0, III: 0, aVR: 0, aVL: 2, aVF: 0, V1: 0, V2: 0, V3: 0, V4: 0, V5: 0, V6: 0, total: 0 },
   ],
 });
 
