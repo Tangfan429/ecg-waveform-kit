@@ -5,7 +5,11 @@ import {
   HIGH_FREQUENCY_ECG_TABLE_COLUMNS,
   createHighFrequencyTemplateWaveform,
   createRhythmStripWaveform,
+  getHighFrequencyDetailCanvasWidth,
   getHighFrequencyLeadOptions,
+  getHighFrequencyPixelsPerMv,
+  getHighFrequencyPixelsPerSecond,
+  getHighFrequencyViewportDurationSeconds,
   normalizeHighFrequencyEcgData,
 } from "./highFrequencyEcg.js";
 
@@ -46,6 +50,66 @@ test("normalizeHighFrequencyEcgData keeps the figma-aligned defaults", () => {
     V6: "",
     total: 2,
   });
+});
+
+test("normalizeHighFrequencyEcgData uses toolbar controls as waveform labels", () => {
+  const result = normalizeHighFrequencyEcgData({
+    controls: {
+      gain: "20mm/mV",
+      speed: "50mm/s",
+      leadGroup: "胸导联",
+      activeLead: "V1",
+    },
+    rhythmWaveform: [0, 0.4, -0.1],
+    highFrequencyLeads: [{ lead: "V1", waveform: [0, 1, 0] }],
+  });
+
+  assert.equal(result.rhythm.gainLabel, "20mm/mV");
+  assert.equal(result.rhythm.speedLabel, "50mm/s");
+  assert.equal(result.highFrequency.gainLabel, "20mm/mV");
+  assert.equal(result.highFrequency.speedLabel, "50mm/s");
+});
+
+test("high-frequency paper geometry maps toolbar gain and speed to ECG pixels", () => {
+  assert.equal(getHighFrequencyPixelsPerMv("30mm/mV"), 150);
+  assert.equal(getHighFrequencyPixelsPerSecond("300mm/s"), 1500);
+  assert.equal(
+    getHighFrequencyViewportDurationSeconds({
+      width: 1500,
+      speedLabel: "300mm/s",
+    }),
+    1,
+  );
+  assert.equal(
+    getHighFrequencyViewportDurationSeconds({
+      width: 1600,
+      speedLabel: "300mm/s",
+      horizontalPadding: 50,
+    }),
+    1,
+  );
+  assert.equal(
+    getHighFrequencyDetailCanvasWidth({
+      leadCount: 6,
+      speedLabel: "300mm/s",
+      leadDurationSeconds: 0.8,
+      viewportWidth: 1200,
+      horizontalPadding: 24,
+      leadGap: 20,
+    }),
+    1200,
+  );
+  assert.equal(
+    getHighFrequencyDetailCanvasWidth({
+      leadCount: 6,
+      speedLabel: "25mm/s",
+      leadDurationSeconds: 0.8,
+      minWidth: 1200,
+      horizontalPadding: 24,
+      leadGap: 20,
+    }),
+    1200,
+  );
 });
 
 test("normalizeHighFrequencyEcgData falls back from legacy leadProfiles", () => {

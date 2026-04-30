@@ -4,6 +4,7 @@ import {
   createHighFrequencyTemplateWaveform,
   createRhythmStripWaveform,
 } from "../utils/highFrequencyEcg";
+import { createQtDispersionLeadWaveform } from "../utils/qtDispersion";
 import { createDiagnosisSampleViewModel } from "../utils/sampleDataAdapter";
 
 function createSpectrumSeries({
@@ -398,6 +399,26 @@ export const demoHighFrequencyEcg = Object.freeze({
 export const demoQtDispersion = Object.freeze({
   title: "QT离散度",
   subtitle: "按导联排序展示 QT / QTc 差异和离散权重。",
+  controls: {
+    gain: "30mm/mV",
+    speed: "300mm/s",
+    leadGroup: "肢体导联",
+    activeLead: "II",
+    mode: "single",
+  },
+  selectedBeatIds: ["b2"],
+  beats: [
+    { id: "b1", label: "第1拍", kind: "normal", blocked: false, tWaveClear: true, position: 0.15 },
+    { id: "b2", label: "第2拍", kind: "normal", blocked: false, tWaveClear: true, position: 0.32 },
+    { id: "b3", label: "第3拍", kind: "normal", blocked: false, tWaveClear: true, position: 0.5 },
+    { id: "b4", label: "第4拍", kind: "normal", blocked: false, tWaveClear: true, position: 0.68 },
+    { id: "b5", label: "第5拍", kind: "normal", blocked: false, tWaveClear: true, position: 0.86 },
+  ],
+  leadWaveforms: Object.fromEntries(
+    ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"].map(
+      (lead) => [lead, createQtDispersionLeadWaveform({ lead })],
+    ),
+  ),
   rows: [
     { lead: "I", qt: 404, qtc: 420 },
     { lead: "II", qt: 412, qtc: 436 },

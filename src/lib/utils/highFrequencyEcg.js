@@ -53,6 +53,8 @@ const DEFAULT_TABLE_ROWS = Object.freeze([
   { type: "N" },
   { type: "N" },
 ]);
+const ECG_PIXELS_PER_MM = 5;
+const DEFAULT_HIGH_FREQUENCY_LEAD_DURATION_SECONDS = 0.8;
 
 const LEAD_TEMPLATE_PROFILE = Object.freeze({
   I: { polarity: 1, r: 0.94, s: -0.22, t: 0.1 },
@@ -76,6 +78,52 @@ const normalizeNumberSeries = (series) =>
 
 const normalizeOptionList = (options, fallback) =>
   Array.isArray(options) && options.length ? options : [...fallback];
+
+const parsePaperSettingValue = (label, fallbackValue) => {
+  const value = Number.parseFloat(String(label || ""));
+  return Number.isFinite(value) && value > 0 ? value : fallbackValue;
+};
+
+export function getHighFrequencyPixelsPerMv(gainLabel = DEFAULT_CONTROLS.gain) {
+  const mmPerMv = parsePaperSettingValue(
+    gainLabel,
+    parsePaperSettingValue(DEFAULT_CONTROLS.gain, 30),
+  );
+  return mmPerMv * ECG_PIXELS_PER_MM;
+}
+
+export function getHighFrequencyPixelsPerSecond(
+  speedLabel = DEFAULT_CONTROLS.speed,
+) {
+  const mmPerSecond = parsePaperSettingValue(
+    speedLabel,
+    parsePaperSettingValue(DEFAULT_CONTROLS.speed, 300),
+  );
+  return mmPerSecond * ECG_PIXELS_PER_MM;
+}
+
+export function getHighFrequencyViewportDurationSeconds({
+  width,
+  speedLabel = DEFAULT_CONTROLS.speed,
+  horizontalPadding = 0,
+} = {}) {
+  const drawableWidth = Math.max(
+    0,
+    (Number(width) || 0) - Math.max(0, Number(horizontalPadding) || 0) * 2,
+  );
+  const pixelsPerSecond = getHighFrequencyPixelsPerSecond(speedLabel);
+  return drawableWidth / pixelsPerSecond;
+}
+
+export function getHighFrequencyDetailCanvasWidth({
+  viewportWidth,
+  minWidth = 0,
+} = {}) {
+  return Math.max(
+    Math.ceil(Number(minWidth) || 0),
+    Math.ceil(Number(viewportWidth) || 0),
+  );
+}
 
 export function getHighFrequencyLeadOptions(group) {
   return [...(HIGH_FREQUENCY_LEAD_GROUP_MAP[group] || HIGH_FREQUENCY_LIMB_LEADS)];
@@ -205,13 +253,13 @@ export function normalizeHighFrequencyEcgData(data = {}) {
     rhythm: {
       lead: controls.activeLead,
       waveform: rhythmWaveform,
-      gainLabel: data.rhythm?.gainLabel || "10mm/mV",
-      speedLabel: data.rhythm?.speedLabel || "25mm/s",
+      gainLabel: controls.gain,
+      speedLabel: controls.speed,
       durationSeconds: Number(data.rhythm?.durationSeconds) || 10,
     },
     highFrequency: {
-      gainLabel: data.highFrequency?.gainLabel || "30mm/mV",
-      speedLabel: data.highFrequency?.speedLabel || "30mm/s",
+      gainLabel: controls.gain,
+      speedLabel: controls.speed,
     },
     highFrequencyLeads,
     tableColumns: [...HIGH_FREQUENCY_ECG_TABLE_COLUMNS],

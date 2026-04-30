@@ -10,7 +10,10 @@ import {
 import {
   HIGH_FREQUENCY_CHEST_LEADS,
   HIGH_FREQUENCY_LIMB_LEADS,
+  getHighFrequencyDetailCanvasWidth,
   getHighFrequencyLeadOptions,
+  getHighFrequencyPixelsPerMv,
+  getHighFrequencyViewportDurationSeconds,
   normalizeHighFrequencyEcgData,
 } from "../utils/highFrequencyEcg";
 
@@ -27,6 +30,11 @@ const props = defineProps({
 
 const RHYTHM_HEIGHT = 170;
 const HIGH_FREQUENCY_HEIGHT = 450;
+const ECG_SMALL_GRID_SIZE = 5;
+const ECG_LARGE_GRID_SIZE = ECG_SMALL_GRID_SIZE * 5;
+const RHYTHM_HORIZONTAL_PADDING = 28;
+const DETAIL_HORIZONTAL_PADDING = 24;
+const DETAIL_LEAD_GAP = 20;
 
 const workspaceRef = ref(null);
 const rhythmCanvasRef = ref(null);
@@ -59,6 +67,10 @@ const controlOptions = computed(() => normalizedData.value.controlOptions);
 const activeLeadOptions = computed(() =>
   getHighFrequencyLeadOptions(selectedLeadGroup.value),
 );
+const paperLabels = computed(() => ({
+  gain: selectedGain.value || normalizedData.value.controls.gain,
+  speed: selectedSpeed.value || normalizedData.value.controls.speed,
+}));
 
 const syncControlState = () => {
   const controls = normalizedData.value.controls;
@@ -90,20 +102,17 @@ const prepareCanvas = (canvas, height) => {
 };
 
 const drawEcgGrid = (ctx, width, height) => {
-  const smallGridSize = 14;
-  const largeGridSize = smallGridSize * 5;
-
   ctx.fillStyle = "#fffdfd";
   ctx.fillRect(0, 0, width, height);
 
   ctx.beginPath();
   ctx.strokeStyle = "#ffe2e8";
   ctx.lineWidth = 1;
-  for (let x = 0.5; x <= width; x += smallGridSize) {
+  for (let x = 0.5; x <= width; x += ECG_SMALL_GRID_SIZE) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
   }
-  for (let y = 0.5; y <= height; y += smallGridSize) {
+  for (let y = 0.5; y <= height; y += ECG_SMALL_GRID_SIZE) {
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
   }
@@ -112,38 +121,45 @@ const drawEcgGrid = (ctx, width, height) => {
   ctx.beginPath();
   ctx.strokeStyle = "#ffc7d1";
   ctx.lineWidth = 1;
-  for (let x = 0.5; x <= width; x += largeGridSize) {
+  for (let x = 0.5; x <= width; x += ECG_LARGE_GRID_SIZE) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
   }
-  for (let y = 0.5; y <= height; y += largeGridSize) {
+  for (let y = 0.5; y <= height; y += ECG_LARGE_GRID_SIZE) {
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
   }
   ctx.stroke();
 };
 
-const getSeriesAmplitude = (series) =>
-  Math.max(...series.map((value) => Math.abs(Number(value) || 0)), 1);
-
 const drawWaveform = (
   ctx,
   series,
-  { left, right, baselineY, amplitudePx, stroke = "#222222", lineWidth = 1 },
+  {
+    left,
+    baselineY,
+    pixelsPerSample,
+    pixelsPerMv,
+    maxSamples,
+    stroke = "#222222",
+    lineWidth = 1,
+  },
 ) => {
   if (!series.length) return;
 
-  const maxAmplitude = getSeriesAmplitude(series);
-  const plotWidth = Math.max(right - left, 1);
+  const drawableSeries = Number.isFinite(maxSamples)
+    ? series.slice(0, Math.max(0, Math.floor(maxSamples)))
+    : series;
+  if (!drawableSeries.length) return;
 
   ctx.beginPath();
   ctx.strokeStyle = stroke;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  series.forEach((value, index) => {
-    const x = left + (index / Math.max(series.length - 1, 1)) * plotWidth;
-    const y = baselineY - ((Number(value) || 0) / maxAmplitude) * amplitudePx;
+  drawableSeries.forEach((value, index) => {
+    const x = left + index * pixelsPerSample;
+    const y = baselineY - (Number(value) || 0) * pixelsPerMv;
 
     if (index === 0) {
       ctx.moveTo(x, y);
@@ -160,97 +176,111 @@ const drawRhythmCanvas = () => {
 
   const { ctx, width, height } = canvasState;
   const rhythm = normalizedData.value.rhythm;
-  const marginX = 28;
   const baselineY = Math.round(height * 0.54) + 0.5;
   const axisY = height - 24.5;
+  const pixelsPerMv = getHighFrequencyPixelsPerMv(paperLabels.value.gain) * 0.42;
+  const drawableWidth = Math.max(1, width - RHYTHM_HORIZONTAL_PADDING * 2);
+  const visibleDurationSeconds = getHighFrequencyViewportDurationSeconds({
+    width,
+    speedLabel: paperLabels.value.speed,
+    horizontalPadding: RHYTHM_HORIZONTAL_PADDING,
+  });
+  const pixelsPerSample = drawableWidth / Math.max(rhythm.waveform.length - 1, 1);
 
   drawEcgGrid(ctx, width, height);
 
   ctx.fillStyle = "#1f1f1f";
   ctx.font = "600 14px PingFang SC, Microsoft YaHei, sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText(rhythm.gainLabel, 6, 20);
-  ctx.fillText(rhythm.speedLabel, 6, 42);
+  ctx.fillText(paperLabels.value.gain, 6, 20);
+  ctx.fillText(paperLabels.value.speed, 6, 42);
   ctx.fillText(selectedActiveLead.value || rhythm.lead, 8, baselineY + 16);
 
   ctx.strokeStyle = "rgba(43, 164, 113, 0.42)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(marginX, axisY);
-  ctx.lineTo(width - marginX, axisY);
-  ctx.stroke();
-
-  // 设计稿中节律条有一段绿色测量游标，这里按画布宽度换算位置。
-  const cursorX = marginX + (width - marginX * 2) * 0.12;
-  ctx.strokeStyle = "rgba(43, 164, 113, 0.62)";
-  ctx.beginPath();
-  ctx.moveTo(cursorX, 28);
-  ctx.lineTo(cursorX, axisY - 4);
-  ctx.moveTo(cursorX + 16, 28);
-  ctx.lineTo(cursorX + 16, axisY - 4);
+  ctx.moveTo(RHYTHM_HORIZONTAL_PADDING, axisY);
+  ctx.lineTo(width - RHYTHM_HORIZONTAL_PADDING, axisY);
   ctx.stroke();
 
   drawWaveform(ctx, rhythm.waveform, {
-    left: marginX,
-    right: width - marginX,
+    left: RHYTHM_HORIZONTAL_PADDING,
     baselineY,
-    amplitudePx: 58,
+    pixelsPerSample,
+    pixelsPerMv,
+    maxSamples: rhythm.waveform.length,
     stroke: "#1f1f1f",
     lineWidth: 1.1,
   });
 
   ctx.fillStyle = "#222222";
   ctx.font = "600 14px PingFang SC, Microsoft YaHei, sans-serif";
-  ctx.fillText("0.0S", marginX, axisY - 6);
+  ctx.fillText("0.0S", RHYTHM_HORIZONTAL_PADDING, axisY - 6);
   ctx.textAlign = "center";
-  ctx.fillText("5.0S", width / 2, axisY - 6);
+  ctx.fillText(`${(visibleDurationSeconds / 2).toFixed(1)}S`, width / 2, axisY - 6);
   ctx.textAlign = "right";
-  ctx.fillText(`${rhythm.durationSeconds.toFixed(1)}S`, width - marginX, axisY - 6);
+  ctx.fillText(
+    `${visibleDurationSeconds.toFixed(1)}S`,
+    width - RHYTHM_HORIZONTAL_PADDING,
+    axisY - 6,
+  );
 };
 
 const drawHighFrequencyCanvas = () => {
+  const canvas = highFrequencyCanvasRef.value;
+  const viewportWidth = Math.max(Math.floor(workspaceRef.value?.clientWidth || 0), 1);
+  const leads = visibleHighFrequencyLeads.value;
+  // 细节画布按可视容器宽度绘制，避免 300mm/s 纸速把下方画布拉宽。
+  const targetWidth = getHighFrequencyDetailCanvasWidth({
+    viewportWidth,
+  });
+  if (canvas) {
+    canvas.style.width = `${targetWidth}px`;
+  }
   const canvasState = prepareCanvas(
-    highFrequencyCanvasRef.value,
+    canvas,
     HIGH_FREQUENCY_HEIGHT,
   );
   if (!canvasState) return;
 
   const { ctx, width, height } = canvasState;
-  const highFrequency = normalizedData.value.highFrequency;
-  const leads = visibleHighFrequencyLeads.value;
   const columns = Math.max(Math.min(leads.length, 6), 1);
-  const rows = Math.max(Math.ceil(leads.length / columns), 1);
-  const marginX = 12;
   const marginTop = 54;
   const marginBottom = 28;
-  const plotWidth = width - marginX * 2;
   const plotHeight = height - marginTop - marginBottom;
-  const cellWidth = plotWidth / columns;
-  const cellHeight = plotHeight / rows;
+  const cellWidth =
+    (width - DETAIL_HORIZONTAL_PADDING * 2 - DETAIL_LEAD_GAP * (columns - 1)) /
+    columns;
+  const cellHeight = plotHeight;
+  const pixelsPerMv = getHighFrequencyPixelsPerMv(paperLabels.value.gain);
+  const maxLeadSamples = Math.max(
+    ...leads.map((lead) => lead.waveform.length),
+    1,
+  );
+  const pixelsPerSample = cellWidth / Math.max(maxLeadSamples - 1, 1);
 
   drawEcgGrid(ctx, width, height);
 
   ctx.fillStyle = "#1f1f1f";
   ctx.font = "600 14px PingFang SC, Microsoft YaHei, sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText(highFrequency.gainLabel, 6, 36);
-  ctx.fillText(highFrequency.speedLabel, 6, 58);
+  ctx.fillText(paperLabels.value.gain, 6, 36);
+  ctx.fillText(paperLabels.value.speed, 6, 58);
 
   leads.forEach((lead, index) => {
     const column = index % columns;
-    const row = Math.floor(index / columns);
-    const cellLeft = marginX + column * cellWidth;
-    const cellRight = cellLeft + cellWidth;
-    const cellTop = marginTop + row * cellHeight;
+    const cellLeft =
+      DETAIL_HORIZONTAL_PADDING + column * (cellWidth + DETAIL_LEAD_GAP);
+    const cellTop = marginTop;
     const baselineY = cellTop + cellHeight * 0.52;
-    const waveformLeft = cellLeft + cellWidth * 0.04;
-    const waveformRight = cellRight - cellWidth * 0.08;
+    const waveformLeft = cellLeft;
 
     drawWaveform(ctx, lead.waveform, {
       left: waveformLeft,
-      right: waveformRight,
       baselineY,
-      amplitudePx: cellHeight * 0.34,
+      pixelsPerSample,
+      pixelsPerMv,
+      maxSamples: lead.waveform.length,
       stroke: "#222222",
       lineWidth: 1.1,
     });
@@ -258,7 +288,7 @@ const drawHighFrequencyCanvas = () => {
     ctx.fillStyle = "#1f1f1f";
     ctx.font = "600 14px PingFang SC, Microsoft YaHei, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(lead.lead, cellLeft + cellWidth * 0.05, baselineY + 24);
+    ctx.fillText(lead.lead, cellLeft + ECG_SMALL_GRID_SIZE, baselineY + 24);
   });
 };
 
@@ -371,11 +401,13 @@ onBeforeUnmount(() => {
         aria-label="高频心电节律波形"
       />
 
-      <canvas
-        ref="highFrequencyCanvasRef"
-        class="hf-ecg-workspace__canvas hf-ecg-workspace__canvas--detail"
-        aria-label="高频心电导联波形"
-      />
+      <div class="hf-ecg-workspace__detail-scroll">
+        <canvas
+          ref="highFrequencyCanvasRef"
+          class="hf-ecg-workspace__canvas hf-ecg-workspace__canvas--detail"
+          aria-label="高频心电导联波形"
+        />
+      </div>
     </div>
 
     <div class="hf-ecg-workspace__table-wrap">
@@ -436,16 +468,23 @@ onBeforeUnmount(() => {
 
   &__canvas {
     display: block;
-    width: 100%;
     border: 1px solid #f5d4da;
     background: #fffdfd;
   }
 
   &__canvas--rhythm {
+    width: 100%;
     height: 170px;
   }
 
+  &__detail-scroll {
+    width: 100%;
+    overflow: hidden;
+    overflow-y: hidden;
+  }
+
   &__canvas--detail {
+    min-width: 100%;
     height: 450px;
   }
 

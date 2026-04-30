@@ -11,3 +11,18 @@ dist
 server/data/*.db
 server/data/*.db-shm
 server/data/*.db-wal
+# Spec workflow
+.spec-workflow/
+# Superpowers
+.superpowers/
+
+# Auto-import generated files
+.eslintrc-auto-import.json
+src/auto-imports.d.ts
+
+# Claude Code 本地设置
+.claude/settings.local.json
+
+# Playwright MCP 临时文件
+.playwright-mcp/
+

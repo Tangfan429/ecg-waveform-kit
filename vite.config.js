@@ -114,10 +114,21 @@ async function readRequestBody(request) {
   return Buffer.concat(chunks);
 }
 
+function readPort(envName, fallback) {
+  const rawValue = process.env[envName] || "";
+  const value = Number(rawValue);
+
+  return Number.isInteger(value) && value > 0 && value <= 65535
+    ? value
+    : fallback;
+}
+
 export default defineConfig({
   plugins: [vue(), createDevAiGatewayProxyPlugin()],
   server: {
     host: "0.0.0.0",
+    port: readPort("VITE_DEV_PORT", 5173),
+    strictPort: false,
     proxy: {
       "/api": {
         target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:8090",
@@ -127,6 +138,8 @@ export default defineConfig({
   },
   preview: {
     host: "0.0.0.0",
+    port: readPort("VITE_PREVIEW_PORT", 4173),
+    strictPort: false,
   },
   resolve: {
     alias: {
