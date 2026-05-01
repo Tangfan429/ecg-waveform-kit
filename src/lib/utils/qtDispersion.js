@@ -18,6 +18,15 @@ export const QT_MEASUREMENT_MODES = Object.freeze([
   { value: "three", label: "三拍模式" },
 ]);
 
+export const QT_DISPERSION_GRID_CONFIG = Object.freeze({
+  smallGridSize: 5,
+  largeGridSize: 25,
+  dotSize: 1,
+  backgroundColor: "#fffdfd",
+  smallGridColor: "rgba(255, 177, 190, 0.72)",
+  largeGridColor: "rgba(255, 164, 180, 0.82)",
+});
+
 const DEFAULT_CONTROLS = Object.freeze({
   gain: "30mm/mV",
   speed: "300mm/s",
@@ -56,6 +65,76 @@ const normalizeNumber = (value, fallback = 0) => {
 
 const gaussian = (x, center, width, amplitude) =>
   amplitude * Math.exp(-((x - center) ** 2) / (2 * width ** 2));
+
+const getGridPositions = (origin, lowerBound, upperBound, step) => {
+  const positions = [];
+
+  for (let value = origin; value <= upperBound; value += step) {
+    positions.push(value);
+  }
+  for (let value = origin - step; value >= lowerBound; value -= step) {
+    positions.push(value);
+  }
+
+  return positions;
+};
+
+const isOnLargeGrid = (position, origin, largeGridSize) => {
+  const offset = Math.abs((Number(position) || 0) - (Number(origin) || 0));
+  const safeLargeGridSize = Math.max(1, Number(largeGridSize) || 1);
+  const remainder = offset % safeLargeGridSize;
+  return remainder < 0.001 || safeLargeGridSize - remainder < 0.001;
+};
+
+export function drawQtDispersionGrid(ctx, width, height) {
+  const {
+    smallGridSize,
+    largeGridSize,
+    dotSize,
+    backgroundColor,
+    smallGridColor,
+    largeGridColor,
+  } = QT_DISPERSION_GRID_CONFIG;
+  const safeWidth = Math.max(0, Number(width) || 0);
+  const safeHeight = Math.max(0, Number(height) || 0);
+
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, safeWidth, safeHeight);
+
+  const xPositions = getGridPositions(0, 0, safeWidth, smallGridSize);
+  const yPositions = getGridPositions(0, 0, safeHeight, smallGridSize);
+  const halfDotSize = dotSize / 2;
+
+  ctx.fillStyle = smallGridColor;
+  xPositions.forEach((x) => {
+    if (isOnLargeGrid(x, 0, largeGridSize)) return;
+
+    const px = Math.round(x);
+    yPositions.forEach((y) => {
+      if (isOnLargeGrid(y, 0, largeGridSize)) return;
+
+      const py = Math.round(y);
+      ctx.fillRect(px - halfDotSize, py - halfDotSize, dotSize, dotSize);
+    });
+  });
+
+  // 大格线使用半像素对齐，避免 1px Canvas 线条在高 DPI 缩放后发虚。
+  ctx.strokeStyle = largeGridColor;
+  ctx.lineWidth = 1;
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  for (let x = 0; x <= safeWidth; x += largeGridSize) {
+    const px = Math.round(x) + 0.5;
+    ctx.moveTo(px, 0);
+    ctx.lineTo(px, safeHeight);
+  }
+  for (let y = 0; y <= safeHeight; y += largeGridSize) {
+    const py = Math.round(y) + 0.5;
+    ctx.moveTo(0, py);
+    ctx.lineTo(safeWidth, py);
+  }
+  ctx.stroke();
+}
 
 export function createQtDispersionLeadWaveform({
   lead = "II",

@@ -7,7 +7,10 @@ import {
   ref,
   watch,
 } from "vue";
-import { normalizeQtDispersionData } from "../utils/qtDispersion";
+import {
+  drawQtDispersionGrid,
+  normalizeQtDispersionData,
+} from "../utils/qtDispersion";
 
 defineOptions({
   name: "QtDispersionWorkspace",
@@ -84,39 +87,6 @@ const prepareCanvas = () => {
   return { ctx, width, height };
 };
 
-const drawGrid = (ctx, width, height) => {
-  const small = 12;
-  const large = small * 5;
-
-  ctx.fillStyle = "#fffdfd";
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.beginPath();
-  ctx.strokeStyle = "#ffe1e8";
-  ctx.lineWidth = 1;
-  for (let x = 0.5; x <= width; x += small) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-  }
-  for (let y = 0.5; y <= height; y += small) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-  }
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.strokeStyle = "#ffc5d0";
-  for (let x = 0.5; x <= width; x += large) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-  }
-  for (let y = 0.5; y <= height; y += large) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-  }
-  ctx.stroke();
-};
-
 const drawWaveform = (ctx, series, region) => {
   if (!Array.isArray(series) || !series.length) return;
 
@@ -185,7 +155,7 @@ const renderCanvas = () => {
   const bottom = height - 28;
   const rowHeight = (bottom - top) / normalizedData.value.leadWaveforms.length;
 
-  drawGrid(ctx, width, height);
+  drawQtDispersionGrid(ctx, width, height);
   drawBeatMarkers(ctx, width, top, bottom);
 
   normalizedData.value.leadWaveforms.forEach((lead, index) => {

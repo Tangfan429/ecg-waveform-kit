@@ -2,12 +2,42 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  QT_DISPERSION_GRID_CONFIG,
   QT_DISPERSION_LEADS,
   createQtDispersionLeadWaveform,
+  drawQtDispersionGrid,
   getSelectableQtBeats,
   normalizeQtDispersionData,
   validateQtBeatSelection,
 } from "./qtDispersion.js";
+
+function createRecordingContext() {
+  const calls = [];
+  const ctx = {
+    calls,
+    fillStyle: "",
+    strokeStyle: "",
+    lineWidth: 0,
+    lineCap: "",
+    beginPath() {
+      calls.push(["beginPath"]);
+    },
+    fillRect(...args) {
+      calls.push(["fillRect", ctx.fillStyle, ...args]);
+    },
+    moveTo(...args) {
+      calls.push(["moveTo", ...args]);
+    },
+    lineTo(...args) {
+      calls.push(["lineTo", ...args]);
+    },
+    stroke() {
+      calls.push(["stroke", ctx.strokeStyle, ctx.lineWidth, ctx.lineCap]);
+    },
+  };
+
+  return ctx;
+}
 
 test("validateQtBeatSelection accepts exactly one eligible beat in single-beat mode", () => {
   const beats = [
@@ -76,4 +106,45 @@ test("createQtDispersionLeadWaveform creates ECG-like data with visible beats", 
   assert.equal(waveform.length, 720);
   assert.ok(Math.max(...waveform) > 0.8);
   assert.ok(Math.min(...waveform) < -0.1);
+});
+
+test("drawQtDispersionGrid uses waveform-analysis ECG paper density", () => {
+  assert.equal(QT_DISPERSION_GRID_CONFIG.smallGridSize, 5);
+  assert.equal(QT_DISPERSION_GRID_CONFIG.largeGridSize, 25);
+
+  const ctx = createRecordingContext();
+
+  drawQtDispersionGrid(ctx, 55, 30);
+
+  assert.deepEqual(ctx.calls[0], [
+    "fillRect",
+    QT_DISPERSION_GRID_CONFIG.backgroundColor,
+    0,
+    0,
+    55,
+    30,
+  ]);
+  assert.ok(
+    ctx.calls.some(
+      (call) =>
+        call[0] === "fillRect" &&
+        call[1] === QT_DISPERSION_GRID_CONFIG.smallGridColor &&
+        call[4] === QT_DISPERSION_GRID_CONFIG.dotSize &&
+        call[5] === QT_DISPERSION_GRID_CONFIG.dotSize,
+    ),
+  );
+  assert.ok(
+    ctx.calls.some(
+      (call) =>
+        call[0] === "stroke" &&
+        call[1] === QT_DISPERSION_GRID_CONFIG.largeGridColor &&
+        call[2] === 1 &&
+        call[3] === "butt",
+    ),
+  );
+  assert.ok(
+    ctx.calls.some(
+      (call) => call[0] === "moveTo" && call[1] === 25.5 && call[2] === 0,
+    ),
+  );
 });

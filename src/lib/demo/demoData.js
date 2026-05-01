@@ -6,6 +6,10 @@ import {
 } from "../utils/highFrequencyEcg";
 import { createQtDispersionLeadWaveform } from "../utils/qtDispersion";
 import { createDiagnosisSampleViewModel } from "../utils/sampleDataAdapter";
+import {
+  createVectorEcgDemoLoopPoints,
+  createVectorEcgDemoWaveformSeries,
+} from "../utils/vectorEcg";
 
 function createSpectrumSeries({
   xMax = 25,
@@ -180,16 +184,6 @@ const createEnvelopeSeries = (length = 180) =>
       ).toFixed(4),
     ),
   );
-
-const createVectorLoopPoints = ({ amplitudeX, amplitudeY, phaseShift = 0 }) =>
-  Array.from({ length: 42 }, (_, index) => {
-    const angle = (Math.PI * 2 * index) / 41 + phaseShift;
-
-    return {
-      x: Number((Math.cos(angle) * amplitudeX + Math.sin(angle * 2) * 0.18).toFixed(4)),
-      y: Number((Math.sin(angle) * amplitudeY + Math.cos(angle * 1.5) * 0.14).toFixed(4)),
-    };
-  });
 
 export const demoStandardEcg = createDiagnosisSampleViewModel(ecgData);
 
@@ -439,34 +433,105 @@ export const demoQtDispersion = Object.freeze({
 
 export const demoVectorEcg = Object.freeze({
   title: "心电向量",
-  subtitle: "提供额面、横面、侧面向量环的通用展示底座。",
-  loops: [
+  activeScale: "20mm/mV",
+  activeRatio: "100/20/40 mm/mv",
+  activePlane: "all",
+  activeLoop: "all",
+  display: {
+    waveform: true,
+    parameterList: true,
+    spatial3d: true,
+  },
+  plots: [
     {
       key: "frontal",
-      label: "额面向量环",
+      label: "额面向量图",
       plane: "Frontal",
-      color: "#3562ec",
-      points: createVectorLoopPoints({ amplitudeX: 0.92, amplitudeY: 0.74 }),
+      loops: [
+        {
+          key: "p",
+          label: "P",
+          color: "#51DFFF",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.22, amplitudeY: 0.16, phaseShift: 0.2 }),
+        },
+        {
+          key: "qrs",
+          label: "QRS",
+          color: "#D54941",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.58, amplitudeY: 0.46, phaseShift: -0.35 }),
+        },
+        {
+          key: "t",
+          label: "T",
+          color: "#2BA471",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.34, amplitudeY: 0.24, phaseShift: 1.1 }),
+        },
+      ],
     },
     {
       key: "horizontal",
-      label: "横面向量环",
+      label: "横面向量图",
       plane: "Horizontal",
-      color: "#2ba471",
-      points: createVectorLoopPoints({ amplitudeX: 0.76, amplitudeY: 0.94, phaseShift: 0.38 }),
+      loops: [
+        {
+          key: "p",
+          label: "P",
+          color: "#51DFFF",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.18, amplitudeY: 0.14, phaseShift: 0.35, rotation: 0.2 }),
+        },
+        {
+          key: "qrs",
+          label: "QRS",
+          color: "#D54941",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.46, amplitudeY: 0.56, phaseShift: 0.28, rotation: -0.18 }),
+        },
+        {
+          key: "t",
+          label: "T",
+          color: "#2BA471",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.24, amplitudeY: 0.28, phaseShift: 1.3 }),
+        },
+      ],
     },
     {
       key: "sagittal",
-      label: "侧面向量环",
+      label: "侧面向量图",
       plane: "Sagittal",
-      color: "#0ea5e9",
-      points: createVectorLoopPoints({ amplitudeX: 0.68, amplitudeY: 0.82, phaseShift: -0.26 }),
+      loops: [
+        {
+          key: "p",
+          label: "P",
+          color: "#51DFFF",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.16, amplitudeY: 0.14, phaseShift: 0.1, rotation: -0.12 }),
+        },
+        {
+          key: "qrs",
+          label: "QRS",
+          color: "#D54941",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.5, amplitudeY: 0.5, phaseShift: -0.68, rotation: 0.35 }),
+        },
+        {
+          key: "t",
+          label: "T",
+          color: "#2BA471",
+          points: createVectorEcgDemoLoopPoints({ amplitudeX: 0.26, amplitudeY: 0.2, phaseShift: 0.85 }),
+        },
+      ],
     },
   ],
-  summaryRows: [
-    { label: "QRS主轴", value: "+46°" },
-    { label: "T环方向", value: "+28°" },
-    { label: "最大向量", value: "1.42mV" },
-    { label: "环形态", value: "顺时针" },
+  waveformSeries: createVectorEcgDemoWaveformSeries({ sampleCount: 300 }),
+  ratioOptions: [
+    { value: "100/20/40 mm/mv", label: "100/20/40 mm/mv" },
+    { value: "50/10/20 mm/mv", label: "50/10/20 mm/mv" },
+    { value: "25/5/10 mm/mv", label: "25/5/10 mm/mv" },
+  ],
+  parameterRows: [
+    { label: "最大QRS向量", value: "1.42mV" },
+    { label: "QRS-T夹角", value: "43°" },
+    { label: "P环最大向量", value: "0.21mV" },
+    { label: "T环最大向量", value: "0.38mV" },
+    { label: "额面电轴", value: "46°" },
+    { label: "横面旋转", value: "顺钟向" },
+    { label: "空间最大向量", value: "1.61mV" },
   ],
 });
