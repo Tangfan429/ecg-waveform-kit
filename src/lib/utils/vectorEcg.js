@@ -101,10 +101,15 @@ const LOOP_ALIASES = Object.freeze({
 const PLOT_BACKGROUND = "#FFFCFD";
 const ECG_MINOR_GRID = "#F7DCE2";
 const ECG_MAJOR_GRID = "#EDAAB7";
-const POLAR_GRID = "#C9C9C9";
-const AXIS_COLOR = "#202020";
+const ECG_DOTTED_GRID = "#FAEEF1";
+const ECG_DOTTED_MAJOR_GRID = "#F3E0E0";
+const POLAR_MINOR_GRID = "#F6C6D1";
+const POLAR_SEGMENT_GRID = "#C5C5C5";
+const AXIS_COLOR = "#181818";
 const LABEL_COLOR = "rgba(0, 0, 0, 0.48)";
 const MUTED_LABEL_COLOR = "rgba(0, 0, 0, 0.34)";
+const WAVEFORM_TRACE_COLOR = "#000000";
+const WAVEFORM_MARKER_COLOR = "#2BA471";
 const DEFAULT_FONT = '600 13px "PingFang SC", "Microsoft YaHei", sans-serif';
 const SMALL_FONT = '500 12px "PingFang SC", "Microsoft YaHei", sans-serif';
 
@@ -352,7 +357,7 @@ const getVisibleLoops = (plot, loopMode = "all") => {
   return plot.loops.filter((loop) => normalizeLoopMode(loop.key, "") === normalizedLoop);
 };
 
-const drawAxisLine = (ctx, x1, y1, x2, y2, color = POLAR_GRID, lineWidth = 1, dash = []) => {
+const drawAxisLine = (ctx, x1, y1, x2, y2, color = POLAR_SEGMENT_GRID, lineWidth = 1, dash = []) => {
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = "butt";
@@ -368,7 +373,7 @@ const drawEcgPaperGrid = (ctx, width, height, minorStep = 12) => {
   ctx.fillStyle = PLOT_BACKGROUND;
   ctx.fillRect(0, 0, width, height);
 
-  // Figma 底图使用心电纸小格加粗格，Canvas 绘制时保持 CSS 像素坐标以适配 DPR。
+  // 波形图沿用心电纸：5 个小格形成一个加粗大格，便于对齐时间与电压刻度。
   for (let x = 0; x <= width; x += minorStep) {
     const major = Math.round(x / minorStep) % 5 === 0;
     drawAxisLine(ctx, x, 0, x, height, major ? ECG_MAJOR_GRID : ECG_MINOR_GRID, major ? 1 : 0.7);
@@ -378,6 +383,79 @@ const drawEcgPaperGrid = (ctx, width, height, minorStep = 12) => {
     const major = Math.round(y / minorStep) % 5 === 0;
     drawAxisLine(ctx, 0, y, width, y, major ? ECG_MAJOR_GRID : ECG_MINOR_GRID, major ? 1 : 0.7);
   }
+};
+
+const getGridPositions = (origin, lowerBound, upperBound, step) => {
+  const positions = [];
+
+  for (let value = origin; value <= upperBound; value += step) {
+    positions.push(value);
+  }
+
+  for (let value = origin - step; value >= lowerBound; value -= step) {
+    positions.push(value);
+  }
+
+  return positions;
+};
+
+const isOnLargeGrid = (position, origin, largeGridSize) => {
+  const offset = Math.abs((Number(position) || 0) - (Number(origin) || 0));
+  const safeLargeGridSize = Math.max(1, Number(largeGridSize) || 1);
+  const remainder = offset % safeLargeGridSize;
+  return remainder < 0.001 || safeLargeGridSize - remainder < 0.001;
+};
+
+const drawDottedEcgPaperGrid = (ctx, width, height) => {
+  const largeGridSize = 29;
+  const smallGridSize = largeGridSize / 5;
+  const gridStartX = 12;
+  const gridStartY = 16;
+  const gridEndX = Math.max(gridStartX, width - 10);
+  const gridEndY = Math.max(gridStartY, height - 8);
+  const dotSize = 1.1;
+  const halfDotSize = dotSize / 2;
+
+  ctx.fillStyle = PLOT_BACKGROUND;
+  ctx.fillRect(0, 0, width, height);
+
+  // 与波形分析页一致：小格用点阵弱化视觉噪声，大格保留淡线用于读数定位。
+  ctx.fillStyle = ECG_DOTTED_GRID;
+  getGridPositions(gridStartX, gridStartX, gridEndX, smallGridSize).forEach((x) => {
+    if (isOnLargeGrid(x, gridStartX, largeGridSize)) return;
+
+    getGridPositions(gridStartY, gridStartY, gridEndY, smallGridSize).forEach((y) => {
+      if (isOnLargeGrid(y, gridStartY, largeGridSize)) return;
+
+      ctx.fillRect(
+        Math.round(x) - halfDotSize,
+        Math.round(y) - halfDotSize,
+        dotSize,
+        dotSize,
+      );
+    });
+  });
+
+  ctx.strokeStyle = ECG_DOTTED_MAJOR_GRID;
+  ctx.lineWidth = 1;
+  ctx.lineCap = "butt";
+  ctx.lineJoin = "miter";
+  ctx.setLineDash([]);
+  ctx.beginPath();
+
+  for (let x = gridStartX; x <= gridEndX; x += largeGridSize) {
+    const px = Math.round(x) + 0.5;
+    ctx.moveTo(px, gridStartY);
+    ctx.lineTo(px, gridEndY);
+  }
+
+  for (let y = gridStartY; y <= gridEndY; y += largeGridSize) {
+    const py = Math.round(y) + 0.5;
+    ctx.moveTo(gridStartX, py);
+    ctx.lineTo(gridEndX, py);
+  }
+
+  ctx.stroke();
 };
 
 const getPlotGeometry = (width, height) => {
@@ -398,15 +476,18 @@ const toCanvasPoint = (point, geometry) => ({
   y: geometry.centerY - clamp(normalizeNumber(point.y, 0), -1, 1) * geometry.radiusY,
 });
 
-const drawPolarGrid = (ctx, geometry) => {
-  const ringStep = Math.max(10, Math.min(14, geometry.height / 28));
-  const ringCount = Math.ceil(geometry.gridRadius / ringStep);
+const drawFigmaPolarBackground = (ctx, geometry) => {
+  ctx.fillStyle = PLOT_BACKGROUND;
+  ctx.fillRect(0, 0, geometry.width, geometry.height);
+
+  const ringStep = Math.max(10, Math.min(12, geometry.height / 33));
+  const ringCount = Math.ceil(geometry.gridRadius / ringStep) + 1;
 
   for (let index = 1; index <= ringCount; index += 1) {
     const radius = index * ringStep;
     const major = index % 5 === 0;
-    ctx.strokeStyle = major ? ECG_MAJOR_GRID : ECG_MINOR_GRID;
-    ctx.lineWidth = major ? 1 : 0.8;
+    ctx.strokeStyle = major ? ECG_MAJOR_GRID : POLAR_MINOR_GRID;
+    ctx.lineWidth = major ? 1.1 : 1;
     ctx.lineCap = "butt";
     ctx.lineJoin = "miter";
     ctx.setLineDash(major ? [] : [1, 4]);
@@ -424,19 +505,20 @@ const drawPolarGrid = (ctx, geometry) => {
   }
 
   for (let degree = 0; degree < 360; degree += 30) {
+    if (degree % 90 === 0) continue;
+
     const angle = (degree / 180) * Math.PI;
     const x = geometry.centerX + Math.cos(angle) * geometry.gridRadius;
     const y = geometry.centerY + Math.sin(angle) * geometry.gridRadius;
-    const isAxis = degree % 90 === 0;
     drawAxisLine(
       ctx,
       geometry.centerX,
       geometry.centerY,
       x,
       y,
-      isAxis ? AXIS_COLOR : POLAR_GRID,
-      isAxis ? 1.2 : 0.8,
-      isAxis ? [] : [2, 5],
+      POLAR_SEGMENT_GRID,
+      1,
+      [2, 5],
     );
   }
 
@@ -537,11 +619,72 @@ export function drawVectorEcgPlot(ctx, {
   const visibleLoops = getVisibleLoops(safePlot, loopMode);
 
   ctx.clearRect(0, 0, geometry.width, geometry.height);
-  drawEcgPaperGrid(ctx, geometry.width, geometry.height);
-  drawPolarGrid(ctx, geometry);
+  drawFigmaPolarBackground(ctx, geometry);
   drawPlotLabels(ctx, safePlot, geometry, normalizeScale(scale));
   visibleLoops.forEach((loop) => drawLoop(ctx, loop, geometry));
 }
+
+const getWaveformSampleWindow = (samples, sampleCount = 96) => {
+  const safeSamples = Array.isArray(samples) ? samples : [];
+  if (safeSamples.length <= sampleCount) return safeSamples;
+
+  const maxAbs = safeSamples.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0);
+  const middle = safeSamples.length / 2;
+  const peakIndex = safeSamples.reduce((bestIndex, sample, index) => {
+    if (Math.abs(sample) < maxAbs * 0.85) return bestIndex;
+
+    return Math.abs(index - middle) < Math.abs(bestIndex - middle) ? index : bestIndex;
+  }, 0);
+  const prePeakCount = Math.round(sampleCount * 0.36);
+  const start = clamp(peakIndex - prePeakCount, 0, safeSamples.length - sampleCount);
+
+  return safeSamples.slice(start, start + sampleCount);
+};
+
+const drawWaveformPath = (ctx, samples, {
+  left,
+  width,
+  baseline,
+  amplitude,
+} = {}) => {
+  const maxAbs = samples.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0) || 1;
+
+  ctx.strokeStyle = WAVEFORM_TRACE_COLOR;
+  ctx.lineWidth = 1.3;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  samples.forEach((sample, index) => {
+    const x = left + (index / Math.max(1, samples.length - 1)) * width;
+    const y = baseline - (sample / maxAbs) * amplitude;
+
+    if (index === 0) {
+      ctx.moveTo(x, y);
+      return;
+    }
+
+    ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+};
+
+const drawWaveformMarkers = (ctx, left, width, baseline, markerHeight) => {
+  const markerOffsets = [0, 28, 38, 61, 97, 141];
+
+  markerOffsets.forEach((offset) => {
+    const x = left + (offset / 141) * width;
+    drawAxisLine(
+      ctx,
+      x,
+      baseline - markerHeight / 2,
+      x,
+      baseline + markerHeight / 2,
+      WAVEFORM_MARKER_COLOR,
+      1,
+    );
+  });
+};
 
 export function drawVectorWaveformPanel(ctx, {
   width,
@@ -552,49 +695,43 @@ export function drawVectorWaveformPanel(ctx, {
   const safeWidth = Math.max(1, normalizeNumber(width, 1));
   const safeHeight = Math.max(1, normalizeNumber(height, 1));
   const series = [0, 1, 2].map((_, index) => normalizeWaveformSeries(waveformSeries?.[index], index));
-  const left = 42;
-  const right = 18;
-  const top = 28;
-  const bottom = 20;
-  const rowHeight = (safeHeight - top - bottom) / series.length;
+  const waveformWidth = clamp(safeWidth * 0.2, 118, 220);
+  const waveformLeft = clamp(safeWidth * 0.327, 72, safeWidth - waveformWidth - 40);
+  const labelX = waveformLeft + Math.max(18, waveformWidth * 0.13);
+  const markerHeight = clamp(safeHeight * 0.072, 22, 34);
+  const rows = [
+    { baseline: safeHeight * 0.31, amplitude: safeHeight * 0.25 },
+    { baseline: safeHeight * 0.46, amplitude: safeHeight * 0.14 },
+    { baseline: safeHeight * 0.73, amplitude: safeHeight * 0.19 },
+  ];
 
   ctx.clearRect(0, 0, safeWidth, safeHeight);
-  drawEcgPaperGrid(ctx, safeWidth, safeHeight);
+  drawDottedEcgPaperGrid(ctx, safeWidth, safeHeight);
 
   ctx.fillStyle = MUTED_LABEL_COLOR;
-  ctx.font = SMALL_FONT;
+  ctx.font = DEFAULT_FONT;
   ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  ctx.fillText(`50mm/s ${normalizeScale(scale).replace("mm/mV", "m/mv")}`, safeWidth - 14, 18);
+  ctx.textBaseline = "top";
+  ctx.fillText(`50mm/s ${normalizeScale(scale).replace("mm/mV", "m/mv")}`, safeWidth - 17, 17);
 
   series.forEach((item, rowIndex) => {
-    const baseline = top + rowHeight * (rowIndex + 0.5);
-    drawAxisLine(ctx, left, baseline, safeWidth - right, baseline, POLAR_GRID, 1, [4, 5]);
+    const row = rows[rowIndex];
+    const samples = getWaveformSampleWindow(item.samples);
+    if (samples.length < 2) return;
 
     ctx.fillStyle = LABEL_COLOR;
     ctx.font = DEFAULT_FONT;
-    ctx.textAlign = "left";
-    ctx.fillText(item.label, 14, baseline);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(item.label, labelX, row.baseline - row.amplitude * 0.5);
 
-    const samples = item.samples;
-    if (samples.length < 2) return;
-
-    ctx.strokeStyle = item.color;
-    ctx.lineWidth = 1.8;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    samples.forEach((sample, index) => {
-      const x = left + (index / (samples.length - 1)) * (safeWidth - left - right);
-      const y = baseline - sample * rowHeight * 0.34;
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+    drawWaveformPath(ctx, samples, {
+      left: waveformLeft,
+      width: waveformWidth,
+      baseline: row.baseline,
+      amplitude: row.amplitude,
     });
-    ctx.stroke();
+    drawWaveformMarkers(ctx, waveformLeft, waveformWidth, row.baseline, markerHeight);
   });
 }
 

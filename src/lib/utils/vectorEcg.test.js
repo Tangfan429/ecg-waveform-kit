@@ -64,6 +64,20 @@ function createRecordingContext() {
   return ctx;
 }
 
+function getPathBeforeStroke(calls, strokeIndex) {
+  const pathCalls = [];
+
+  for (let index = strokeIndex - 1; index >= 0; index -= 1) {
+    const call = calls[index];
+    if (call[0] === "beginPath") break;
+    if (call[0] === "moveTo" || call[0] === "lineTo") {
+      pathCalls.unshift(call);
+    }
+  }
+
+  return pathCalls;
+}
+
 test("normalizeVectorEcgData builds figma-aligned professional controls", () => {
   const result = normalizeVectorEcgData({
     activePlane: "F",
@@ -139,6 +153,39 @@ test("drawVectorEcgPlot paints polar grid, labels, and colored loops", () => {
   );
 });
 
+test("drawVectorEcgPlot uses vectorcardiography polar background without ECG paper grid", () => {
+  const ctx = createRecordingContext();
+
+  drawVectorEcgPlot(ctx, {
+    width: 722,
+    height: 396,
+    plot: normalizeVectorEcgData().plots[0],
+  });
+
+  const strokes = ctx.calls.filter((call) => call[0] === "stroke");
+  const verticalGridLines = strokes.filter(
+    (call) => call[1] === "#EDAAB7" && call[2] === 1,
+  );
+  const finePolarRings = strokes.filter(
+    (call) => call[1] === "#F6C6D1" && call[2] === 1,
+  );
+  const majorPolarRings = strokes.filter(
+    (call) => call[1] === "#EDAAB7" && call[2] === 1.1,
+  );
+  const segmentRays = strokes.filter(
+    (call) => call[1] === "#C5C5C5" && call[2] === 1,
+  );
+  const axisLines = strokes.filter(
+    (call) => call[1] === "#181818" && call[2] === 1.2,
+  );
+
+  assert.equal(verticalGridLines.length, 0);
+  assert.ok(finePolarRings.length > 24);
+  assert.ok(majorPolarRings.length >= 5);
+  assert.ok(segmentRays.length >= 4);
+  assert.equal(axisLines.length, 2);
+});
+
 test("getVisibleVectorPlots returns two figma primary panels in ALL mode", () => {
   const plots = normalizeVectorEcgData().plots;
 
@@ -176,23 +223,41 @@ test("getVisibleVectorPlots returns one plane or all professional planes", () =>
   assert.deepEqual(getVisibleVectorPlots(plots, "sagittal").map((plot) => plot.key), ["sagittal"]);
 });
 
-test("drawVectorWaveformPanel paints stacked X Y Z waveforms on ECG paper", () => {
+test("drawVectorWaveformPanel paints centered black X Y Z template on dotted ECG paper", () => {
   const ctx = createRecordingContext();
   const { waveformSeries } = normalizeVectorEcgData();
 
   drawVectorWaveformPanel(ctx, {
-    width: 420,
-    height: 240,
+    width: 722,
+    height: 396,
     waveformSeries,
     scale: "20mm/mV",
   });
 
-  assert.deepEqual(ctx.calls[0], ["clearRect", 0, 0, 420, 240]);
+  assert.deepEqual(ctx.calls[0], ["clearRect", 0, 0, 722, 396]);
   assert.ok(ctx.calls.some((call) => call[0] === "fillRect" && call[1] === "#FFFCFD"));
+  assert.ok(ctx.calls.some((call) => call[0] === "fillRect" && call[1] === "#FAEEF1"));
+  assert.ok(ctx.calls.some((call) => call[0] === "stroke" && call[1] === "#F3E0E0"));
   assert.ok(ctx.calls.some((call) => call[0] === "fillText" && call.includes("X")));
   assert.ok(ctx.calls.some((call) => call[0] === "fillText" && call.includes("Y")));
   assert.ok(ctx.calls.some((call) => call[0] === "fillText" && call.includes("Z")));
-  assert.ok(ctx.calls.some((call) => call[0] === "stroke" && call[1] === waveformSeries[0].color));
+  assert.ok(ctx.calls.some((call) => call[0] === "fillText" && call.includes("50mm/s 20m/mv")));
+
+  const blackStrokeIndexes = ctx.calls
+    .map((call, index) => [call, index])
+    .filter(([call]) => call[0] === "stroke" && call[1] === "#000000")
+    .map(([, index]) => index);
+  const markerStrokes = ctx.calls.filter((call) => call[0] === "stroke" && call[1] === "#2BA471");
+
+  assert.equal(blackStrokeIndexes.length, 3);
+  assert.ok(markerStrokes.length >= 15);
+  assert.equal(ctx.calls.some((call) => call[0] === "stroke" && call[1] === waveformSeries[0].color), false);
+
+  const firstWavePath = getPathBeforeStroke(ctx.calls, blackStrokeIndexes[0]);
+  const xPositions = firstWavePath.map((call) => call[1]);
+  assert.ok(Math.min(...xPositions) > 722 * 0.28);
+  assert.ok(Math.max(...xPositions) < 722 * 0.58);
+  assert.ok(Math.max(...xPositions) - Math.min(...xPositions) < 722 * 0.24);
 });
 
 test("drawVectorEcg3dPanel paints projected axes and selected spatial loops", () => {

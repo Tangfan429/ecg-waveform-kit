@@ -27,6 +27,7 @@ const props = defineProps({
 
 const workspaceRef = ref(null);
 const canvasRefs = ref({});
+const panelRefs = ref({});
 const activeScale = shallowRef("20mm/mV");
 const activeRatio = shallowRef("100/20/40 mm/mv");
 const activePlane = shallowRef("all");
@@ -57,6 +58,20 @@ const setCanvasRef = (key, element) => {
   delete canvasRefs.value[key];
 };
 
+const setPanelRef = (key, element) => {
+  if (resizeObserver && panelRefs.value[key]) {
+    resizeObserver.unobserve(panelRefs.value[key]);
+  }
+
+  if (element) {
+    panelRefs.value[key] = element;
+    resizeObserver?.observe(element);
+    return;
+  }
+
+  delete panelRefs.value[key];
+};
+
 const syncStateFromData = () => {
   const data = normalizedData.value;
 
@@ -85,7 +100,8 @@ const renderCanvas = (key, fallbackWidth, fallbackHeight, draw) => {
   const canvas = canvasRefs.value[key];
   if (!canvas) return;
 
-  const rect = canvas.getBoundingClientRect();
+  const panel = panelRefs.value[key] || canvas.parentElement;
+  const rect = panel?.getBoundingClientRect?.() || canvas.getBoundingClientRect();
   const width = Math.max(1, rect.width || canvas.clientWidth || fallbackWidth);
   const height = Math.max(1, rect.height || canvas.clientHeight || fallbackHeight);
   const ctx = setupCanvas(canvas, width, height);
@@ -144,12 +160,12 @@ watch(
 );
 
 onMounted(() => {
-  nextTick(scheduleRender);
-
-  if (workspaceRef.value && typeof ResizeObserver !== "undefined") {
+  if (typeof ResizeObserver !== "undefined") {
     resizeObserver = new ResizeObserver(() => scheduleRender());
-    resizeObserver.observe(workspaceRef.value);
+    Object.values(panelRefs.value).forEach((element) => resizeObserver.observe(element));
   }
+
+  nextTick(scheduleRender);
 });
 
 onBeforeUnmount(() => {
@@ -221,6 +237,7 @@ onBeforeUnmount(() => {
         <article
           v-for="plot in primaryPlots"
           :key="plot.key"
+          :ref="(element) => setPanelRef(plot.key, element)"
           class="vector-panel vector-panel--plot"
           :class="{ 'vector-panel--muted': !isPlotVisible(plot) }"
           :aria-hidden="!isPlotVisible(plot)"
@@ -234,7 +251,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="vector-workspace__lower">
-        <article class="vector-panel vector-panel--waveform">
+        <article :ref="(element) => setPanelRef('waveform', element)" class="vector-panel vector-panel--waveform">
           <canvas
             :ref="(element) => setCanvasRef('waveform', element)"
             class="vector-panel__canvas"
@@ -244,6 +261,7 @@ onBeforeUnmount(() => {
 
         <article
           v-if="secondaryPlot"
+          :ref="(element) => setPanelRef(secondaryPlot.key, element)"
           class="vector-panel vector-panel--plot"
           :class="{ 'vector-panel--muted': !isPlotVisible(secondaryPlot) }"
           :aria-hidden="!isPlotVisible(secondaryPlot)"
